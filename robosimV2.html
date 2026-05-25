@@ -62,7 +62,27 @@
       font-weight: 700;
       color: #fff;
       letter-spacing: .1em;
-      margin-right: 4px
+      margin-right: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .ico {
+      width: 1em;
+      height: 1em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      color: currentColor;
+      vertical-align: -0.12em
+    }
+
+    .brand-icon {
+      color: #fff;
+      font-size: 14px;
+      filter: drop-shadow(0 0 2px rgba(255, 255, 255, .18))
     }
 
     .tag {
@@ -488,7 +508,10 @@
       font-size: 15px;
       color: #fff;
       letter-spacing: .06em;
-      margin-bottom: 4px
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px
     }
 
     .modal-head p {
@@ -752,12 +775,7 @@
       }
 
       #speed-wrap {
-        order: 5;
-        flex: 1 1 130px
-      }
-
-      #speed-wrap input[type=range] {
-        width: min(110px, 28vw)
+        display: none
       }
 
       #btnRun,
@@ -845,14 +863,6 @@
         font-size: 11px
       }
 
-      #btnStop {
-        display: none
-      }
-
-      #speed-wrap {
-        font-size: 10px
-      }
-
       #console {
         height: 92px
       }
@@ -879,6 +889,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/darcula.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
@@ -886,9 +897,8 @@
 </head>
 
 <body data-mobile-panel="sim">
-
   <div id="toolbar">
-    <h1>⬛ RoboSim</h1>
+    <h1><i class="bi bi-cpu-fill ico brand-icon" aria-hidden="true"></i><span>RoboSim</span></h1>
     <span class="tag">v1.0</span>
     <span class="tag">Seguidor de Línea</span>
     <div id="panelSwitch" aria-label="Cambiar panel">
@@ -903,21 +913,23 @@
         <option value="figure8">Figura 8</option>
         <option value="zigzag">Zigzag</option>
         <option value="custom_loaded" style="display:none">Pista Personalizada</option>
-        <option value="custom">📁 Cargar PNG...</option>
+        <option value="custom">Cargar PNG...</option>
       </select>
       <input type="file" id="trackUpload" accept="image/png, image/jpeg" style="display:none">
     </div>
     <div class="sep"></div>
-    <button class="btn" id="btnSettings" title="Ajustes de sensores"><span aria-hidden="true">&#128295;</span>
+    <button class="btn" id="btnSettings" title="Ajustes de sensores"><i class="bi bi-wrench ico"
+        aria-hidden="true"></i>
       Ajustes</button>
     <div id="speed-wrap">
       Vel sim:
       <input type="range" min="0.5" max="4" step="0.5" value="1" id="simSpeedRange">
       <span id="simSpeedVal">1x</span>
     </div>
-    <button class="btn run" id="btnRun">▶ Ejecutar</button>
-    <button class="btn stop" id="btnStop" disabled>■ Detener</button>
-    <button class="btn" id="btnReset">↺ Reset</button>
+    <button class="btn run" id="btnRun"><i class="bi bi-play-fill ico" aria-hidden="true"></i> Ejecutar</button>
+    <button class="btn stop" id="btnStop" disabled><i class="bi bi-stop-fill ico" aria-hidden="true"></i>
+      Detener</button>
+    <button class="btn" id="btnReset"><i class="bi bi-arrow-clockwise ico" aria-hidden="true"></i> Reset</button>
   </div>
 
   <div id="main">
@@ -967,7 +979,7 @@
         <div class="c-sys">// RoboSim v1.0 — Runtime Arduino JS</div>
         <div class="c-sys">// Motores: IN1=5 IN2=6 (izq) | IN3=9 IN4=10 (der)</div>
         <div class="c-sys" id="consoleSensorInfo">// Sensores: A0..A4 → 0=línea / 1023=blanco</div>
-        <div class="c-sys">// Listo. Presioná ▶ Ejecutar</div>
+        <div class="c-sys">// Listo. Presioná Ejecutar</div>
       </div>
     </div>
 
@@ -1100,7 +1112,7 @@ void loop() {
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
       <div class="modal-head">
         <div>
-          <h2 id="settingsTitle">&#128295; Ajustes del velocista</h2>
+          <h2 id="settingsTitle"><i class="bi bi-wrench ico" aria-hidden="true"></i> Ajustes del velocista</h2>
           <p>Configur&aacute; la trompa del robot: cantidad de sensores IR, separaci&oacute;n f&iacute;sica y pines
             anal&oacute;gicos del sketch.</p>
         </div>
@@ -1670,12 +1682,6 @@ const RACER_COAST_DRAG = 3.2;
     sbar.position.set(SENSOR_FWD - 0.005, 0.02, 0);
     chassisMesh.add(sbar);
 
-    // Flecha indicadora de dirección
-    const arrowMesh = new THREE.Mesh(new THREE.ConeGeometry(0.015, 0.04, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    arrowMesh.rotation.z = -Math.PI / 2;
-    arrowMesh.position.set(0.04, 0.045, 0);
-    chassisMesh.add(arrowMesh);
-
     const sensorMeshes = [];
     for (let i = 0; i < SENSOR_MAX_COUNT; i++) {
       const sm = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff2200 }));
@@ -1795,11 +1801,30 @@ const RACER_COAST_DRAG = 3.2;
 
     function createWheelMesh() {
       const g = new THREE.Group();
-      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 14), new THREE.MeshBasicMaterial({ color: 0x1a1a1a }));
+      const tireMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+      const sideMat = new THREE.MeshBasicMaterial({ color: 0x20242a });
+      const treadMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 24), tireMat);
       w.rotation.x = Math.PI / 2;
-      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.015, 14, 1, true), new THREE.MeshBasicMaterial({ color: 0x444444 }));
-      ring.rotation.x = Math.PI / 2;
-      g.add(w); g.add(ring);
+      g.add(w);
+
+      // Tapas laterales levemente menores que la rueda: evita z-fighting/franjas claras.
+      const capGeo = new THREE.CylinderGeometry(0.046, 0.046, 0.004, 24);
+      const capL = new THREE.Mesh(capGeo, sideMat);
+      capL.rotation.x = Math.PI / 2;
+      capL.position.z = -0.021;
+      const capR = capL.clone();
+      capR.position.z = 0.021;
+      g.add(capL, capR);
+
+      // Pequeños tacos oscuros para que se note el giro sin meter bandas grises coplanares.
+      for (let i = 0; i < 8; i++) {
+        const tread = new THREE.Mesh(new THREE.BoxGeometry(0.010, 0.006, 0.043), treadMat);
+        const a = (i / 8) * Math.PI * 2;
+        tread.position.set(Math.cos(a) * 0.052, Math.sin(a) * 0.052, 0);
+        tread.rotation.z = a;
+        g.add(tread);
+      }
       return g;
     }
     const leftWheelMesh = createWheelMesh();
@@ -2537,7 +2562,7 @@ function pwmToWheelSpeed(pwm, gain) {
     resetState();
     renderer.render(scene, activeCamera);
     log('Pista "óvalo" cargada — todo listo', 'c-ok');
-    log('💡 TIP: Mantené SHIFT y arrastrá en la pista para colocar el robot', 'c-sys');
+    log('TIP: Mantené SHIFT y arrastrá en la pista para colocar el robot', 'c-sys');
 
     // ─── HAND OF GOD (INTERACTIVE PLACEMENT) ──────────────────
     const raycaster = new THREE.Raycaster();
