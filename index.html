@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoboSim — Seguidor de Línea Arduino</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;
+    --green:#1D9E75;--green2:#0F6E56;
+    --text:#c9d1d9;--text2:#8b949e;
+    --border:#30363d;--yellow:#f0c040;--red:#f97583;--blue:#79c0ff;
+  }
+  body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  #toolbar{display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+  #toolbar h1{font-size:14px;font-weight:700;color:var(--green);letter-spacing:.1em;margin-right:4px}
+  .tag{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+  .sep{flex:1}
+  .btn{font-size:12px;font-family:'Courier New',monospace;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s}
+  .btn:hover{background:var(--bg3)}
+  .btn.run{background:var(--green);color:#fff;border-color:var(--green2);font-weight:700}
+  .btn.run:hover{background:var(--green2)}
+  .btn.stop{background:#a32d2d;color:#fff;border-color:#791f1f}
+  .btn.stop:hover{background:#791f1f}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  #speed-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+  #speed-wrap input[type=range]{width:75px;accent-color:var(--green)}
+  #main{display:grid;grid-template-columns:1fr 390px;flex:1;overflow:hidden}
+  #left{display:flex;flex-direction:column;overflow:hidden}
+  #canvas-wrap{flex:1;position:relative;background:#111827;overflow:hidden}
+  #simCanvas{width:100%;height:100%;display:block}
+  #hud{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:6px}
+  #sensors-row{display:flex;gap:5px;align-items:center}
+  .s-label{font-size:10px;color:var(--text2)}
+  .led{width:16px;height:16px;border-radius:50%;border:2px solid #444;transition:all .08s}
+  .led.on{background:#fff;border-color:#fff;box-shadow:0 0 8px #fff}
+  .led.off{background:#1a1a1a}
+  #vel-hud{font-size:11px;color:var(--text2);background:rgba(0,0,0,.6);padding:4px 8px;border-radius:4px;font-family:'Courier New',monospace}
+  #track-wrap{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text2)}
+  #track-wrap select{font-size:11px;font-family:'Courier New',monospace;padding:3px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer}
+  #console{height:160px;background:#0a0e14;border-top:2px solid var(--green);overflow-y:auto;padding:8px 12px;font-size:11px;line-height:1.6;flex-shrink:0}
+  .c-sys{color:var(--blue)}
+  .c-err{color:var(--red)}
+  .c-ok{color:var(--green)}
+  .c-ser{color:var(--yellow)}
+  #right{display:flex;flex-direction:column;border-left:1px solid var(--border);overflow:hidden}
+  #editor-header{padding:8px 14px;font-size:11px;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  #editor-header span{color:var(--green);font-weight:700}
+  #editor{display:none}
+  .CodeMirror { flex:1; height:auto; font-family:'Courier New',monospace; font-size:12px; background:#0d1117 !important; color:#c9d1d9 !important; }
+  .CodeMirror-gutters { background:#0d1117 !important; border-right:1px solid var(--border) !important; }
+  #pinmap{padding:10px 14px;background:var(--bg2);border-top:1px solid var(--border);font-size:11px;flex-shrink:0}
+  .pm-title{color:var(--text2);margin-bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  .pm-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
+  .pm-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #21262d}
+  .pm-row:last-child{border:none}
+  .pm-key{color:var(--text2)}
+  .pm-val{color:var(--green);font-weight:700}
+  .btn-cam { font-size:10px; font-family:'Courier New',monospace; padding:3px 6px; border-radius:4px; border:1px solid var(--border); background:var(--bg3); color:var(--text); cursor:pointer; transition:all .15s; }
+  .btn-cam:hover { background:var(--bg2); }
+  .btn-cam.active { background:var(--green); color:#fff; border-color:var(--green2); font-weight:700; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/darcula.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+</head>
+<body>
+
+<div id="toolbar">
+  <h1>? RoboSim</h1>
+  <span class="tag">v1.0</span>
+  <span class="tag">Seguidor de Línea</span>
+  <div id="track-wrap">
+    &nbsp;Pista:
+    <select id="trackSel">
+      <option value="oval">Óvalo</option>
+      <option value="figure8">Figura 8</option>
+      <option value="zigzag">Zigzag</option>
+      <option value="custom_loaded" style="display:none">Pista Personalizada</option>
+      <option value="custom">?? Cargar PNG...</option>
+    </select>
+    <input type="file" id="trackUpload" accept="image/png, image/jpeg" style="display:none">
+  </div>
+  <div class="sep"></div>
+  <div id="speed-wrap">
+    Vel sim:
+    <input type="range" min="0.5" max="4" step="0.5" value="1" id="simSpeedRange">
+    <span id="simSpeedVal">1x</span>
+  </div>
+  <button class="btn run" id="btnRun">? Ejecutar</button>
+  <button class="btn stop" id="btnStop" disabled>¦ Detener</button>
+  <button class="btn" id="btnReset">? Reset</button>
+</div>
+
+<div id="main">
+  <div id="left">
+    <div id="canvas-wrap">
+      <canvas id="simCanvas"></canvas>
+      <div id="hud">
+        <div id="cam-row" style="display:flex; gap:4px; margin-bottom: 6px;">
+          <button class="btn-cam active" id="btnCamLibre">Libre</button>
+          <button class="btn-cam" id="btnCamAerea">Aérea</button>
+          <button class="btn-cam" id="btnCamOrto">Orto</button>
+        </div>
+        <div id="sensors-row">
+          <span class="s-label">IR:</span>
+          <div class="led off" id="led0" title="A0-S0 izq extra"></div>
+          <div class="led off" id="led1" title="A1-S1 izq"></div>
+          <div class="led off" id="led2" title="A2-S2 centro"></div>
+          <div class="led off" id="led3" title="A3-S3 der"></div>
+          <div class="led off" id="led4" title="A4-S4 der extra"></div>
+        </div>
+        <div id="vel-hud">vL: 0 | vR: 0</div>
+      </div>
+    </div>
+    <div id="console">
+      <div class="c-sys">// RoboSim v1.0 — Runtime Arduino JS</div>
+      <div class="c-sys">// Motores: IN1=5 IN2=6 (izq) | IN3=9 IN4=10 (der)</div>
+      <div class="c-sys">// Sensores: A0..A4 ? 0=línea / 1023=blanco</div>
+      <div class="c-sys">// Listo. Presioná ? Ejecutar</div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div id="editor-header">
+      <span>sketch.ino</span>
+      <span style="color:var(--text2);font-size:10px">Arduino C++ ? JS transpiler</span>
+    </div>
+    <textarea id="editor" spellcheck="false">// Seguidor de línea con PID simple — 5 sensores IR
+// analogRead: 0 = sobre línea negra, 1023 = superficie blanca
+// Motores: analogWrite(pin_adelante, vel) analogWrite(pin_atras, 0)
+
+#define MOTOR_IZQ_A 5
+#define MOTOR_IZQ_B 6
+#define MOTOR_DER_A 9
+#define MOTOR_DER_B 10
+
+#define VEL_BASE   170
+#define KP           1
+
+int sensor0, sensor1, sensor2, sensor3, sensor4;
+int error, correccion;
+int velIzq, velDer;
+
+void setup() {
+  Serial.println("Seguidor PID iniciado");
+}
+
+void loop() {
+  sensor0 = analogRead(A0);
+  sensor1 = analogRead(A1);
+  sensor2 = analogRead(A2);
+  sensor3 = analogRead(A3);
+  sensor4 = analogRead(A4);
+
+  // Calcular error: posición ponderada de la línea
+  // -2 = muy izquierda, 0 = centro, +2 = muy derecha
+  bool enLinea0 = sensor0 < 512;
+  bool enLinea1 = sensor1 < 512;
+  bool enLinea2 = sensor2 < 512;
+  bool enLinea3 = sensor3 < 512;
+  bool enLinea4 = sensor4 < 512;
+
+  error = 0;
+  if (enLinea0) error -= 2;
+  if (enLinea1) error -= 1;
+  if (enLinea3) error += 1;
+  if (enLinea4) error += 2;
+
+  correccion = KP * error;
+
+  velIzq = constrain(VEL_BASE + correccion, 0, 255);
+  velDer = constrain(VEL_BASE - correccion, 0, 255);
+
+  analogWrite(MOTOR_IZQ_A, velIzq);
+  analogWrite(MOTOR_IZQ_B, 0);
+  analogWrite(MOTOR_DER_A, velDer);
+  analogWrite(MOTOR_DER_B, 0);
+
+  delay(10);
+}</textarea>
+    <div id="pinmap">
+      <div class="pm-title">Mapa de pines</div>
+      <div class="pm-grid">
+        <div>
+          <div class="pm-row"><span class="pm-key">Motor Izq +</span><span class="pm-val">MOTOR_IZQ_A = 5</span></div>
+          <div class="pm-row"><span class="pm-key">Motor Izq -</span><span class="pm-val">MOTOR_IZQ_B = 6</span></div>
+          <div class="pm-row"><span class="pm-key">Motor Der +</span><span class="pm-val">MOTOR_DER_A = 9</span></div>
+          <div class="pm-row"><span class="pm-key">Motor Der -</span><span class="pm-val">MOTOR_DER_B = 10</span></div>
+        </div>
+        <div>
+          <div class="pm-row"><span class="pm-key">S0 izq ext</span><span class="pm-val">A0</span></div>
+          <div class="pm-row"><span class="pm-key">S1 izq</span><span class="pm-val">A1</span></div>
+          <div class="pm-row"><span class="pm-key">S2 centro</span><span class="pm-val">A2</span></div>
+          <div class="pm-row"><span class="pm-key">S3 der</span><span class="pm-val">A3</span></div>
+          <div class="pm-row"><span class="pm-key">S4 der ext</span><span class="pm-val">A4</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// --- CONSOLE ----------------------------------------------
+const cons = document.getElementById('console');
+function log(msg, cls=''){
+  const d = document.createElement('div');
+  if(cls) d.className = cls;
+  d.textContent = msg;
+  cons.appendChild(d);
+  cons.scrollTop = cons.scrollHeight;
+  if(cons.children.length > 300) cons.removeChild(cons.children[0]);
+}
+
+// --- THREE.JS ---------------------------------------------
+const canvas = document.getElementById('simCanvas');
+const wrap   = document.getElementById('canvas-wrap');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111827);
+scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+
+let camMode = 'libre';
+const perspCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+perspCamera.position.set(0, 2, 2);
+
+const orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+orthoCamera.position.set(0, 10, 0);
+orthoCamera.lookAt(0, 0, 0);
+
+let activeCamera = perspCamera;
+let controls;
+
+if (typeof THREE.OrbitControls !== 'undefined') {
+  controls = new THREE.OrbitControls(perspCamera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+}
+
+function resize(){
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if(!w || !h) return;
+  perspCamera.aspect = w/h;
+  perspCamera.updateProjectionMatrix();
+  
+  const asp = w/h, vs = 3.8;
+  orthoCamera.left = -vs*asp; orthoCamera.right = vs*asp;
+  orthoCamera.top = vs; orthoCamera.bottom = -vs;
+  orthoCamera.updateProjectionMatrix();
+  
+  renderer.setSize(w, h);
+}
+resize();
+new ResizeObserver(resize).observe(wrap);
+
+// --- TRACKS -----------------------------------------------
+const TRACKS = {
+  oval(){
+    const pts=[];
+    for(let i=0;i<=120;i++){
+      const t=i/120*Math.PI*2;
+      pts.push(new THREE.Vector2(Math.cos(t)*2.4, Math.sin(t)*1.5));
+    }
+    return pts;
+  },
+  figure8(){
+    const pts=[];
+    for(let i=0;i<=240;i++){
+      const t=i/240*Math.PI*2;
+      pts.push(new THREE.Vector2(Math.sin(t)*2.1, Math.sin(t)*Math.cos(t)*1.6));
+    }
+    return pts;
+  },
+  zigzag(){
+    // Un circuito con rectas perimetrales y un zig-zag en la parte superior
+    const wps=[
+      [-2.0, -1.2], // 0. Inicio (Abajo Izquierda)
+      [ 2.0, -1.2], // 1. Recta inferior (Abajo Derecha)
+      [ 2.0,  1.2], // 2. Recta derecha (Arriba Derecha)
+      [ 0.8,  1.2], // 3. Acercarse al centro
+      [ 0.4,  0.0], // 4. Zig (Baja)
+      [ 0.0,  1.2], // 5. Zag (Sube)
+      [-0.4,  0.0], // 6. Zig (Baja)
+      [-0.8,  1.2], // 7. Zag (Sube)
+      [-2.0,  1.2], // 8. Terminar zig-zag (Arriba Izquierda)
+      [-2.0, -1.2]  // 9. Volver al inicio
+    ];
+    const pts=[];
+    for(let i=0;i<wps.length-1;i++){
+      const [x0,y0]=wps[i],[x1,y1]=wps[i+1];
+      for(let s=0;s<40;s++){
+        const k=s/40;
+        pts.push(new THREE.Vector2(x0+(x1-x0)*k, y0+(y1-y0)*k));
+      }
+    }
+    pts.push(new THREE.Vector2(wps[0][0],wps[0][1]));
+    return pts;
+  }
+};
+
+// --- CUSTOM TRACK LOADER ----------------------------------
+let customImgCanvas = document.createElement('canvas');
+let customImgCtx = customImgCanvas.getContext('2d', { willReadFrequently: true });
+let customImageData = null;
+let customImageTex = null;
+let customPlaneWidth = 10;
+let customPlaneHeight = 8;
+
+let trackGroup = new THREE.Group();
+scene.add(trackGroup);
+let trackCurve = null;
+
+function makeTubeMesh(pts3d, width, color, yOff){
+  const shape = new THREE.Shape();
+  const N = pts3d.length;
+  const lefts=[], rights=[];
+  for(let i=0;i<N;i++){
+    const curr=pts3d[i], next=pts3d[(i+1)%N];
+    const dx=next.x-curr.x, dz=next.z-curr.z;
+    const len=Math.sqrt(dx*dx+dz*dz)||0.001;
+    const nx=-dz/len*width*0.5, nz=dx/len*width*0.5;
+    lefts.push([curr.x+nx, curr.z+nz]);
+    rights.push([curr.x-nx, curr.z-nz]);
+  }
+  shape.moveTo(lefts[0][0], lefts[0][1]);
+  for(let i=1;i<N;i++) shape.lineTo(lefts[i][0], lefts[i][1]);
+  for(let i=N-1;i>=0;i--) shape.lineTo(rights[i][0], rights[i][1]);
+  shape.closePath();
+  const geo = new THREE.ShapeGeometry(shape);
+  const mat = new THREE.MeshBasicMaterial({color});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI/2;
+  mesh.position.y = yOff;
+  return mesh;
+}
+
+function buildTrack(type){
+  while(trackGroup.children.length) trackGroup.remove(trackGroup.children[0]);
+  
+  if (type === 'custom' && customImageTex) {
+    trackCurve = null;
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(customPlaneWidth, customPlaneHeight),
+      new THREE.MeshBasicMaterial({map: customImageTex})
+    );
+    floor.rotation.x = -Math.PI/2;
+    trackGroup.add(floor);
+    return;
+  }
+  
+  customImageData = null;
+  const pts2d = TRACKS[type]();
+  const curve = new THREE.SplineCurve(pts2d);
+  trackCurve = curve;
+  const pts3d = curve.getPoints(400).map(p=>new THREE.Vector3(p.x,0,p.y));
+
+  // Floor
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(10,8),
+    new THREE.MeshBasicMaterial({color:0xe8e4d8})
+  );
+  floor.rotation.x = -Math.PI/2;
+  trackGroup.add(floor);
+
+  // White border
+  trackGroup.add(makeTubeMesh(pts3d, 0.42, 0xffffff, 0.005));
+  // Black line
+  trackGroup.add(makeTubeMesh(pts3d, 0.20, 0x111111, 0.010));
+
+  // Start marker
+  const sp = curve.getPoint(0);
+  const startGeo = new THREE.PlaneGeometry(0.12, 0.42);
+  const startMat = new THREE.MeshBasicMaterial({color:0xff3300});
+  const startMesh = new THREE.Mesh(startGeo, startMat);
+  startMesh.rotation.x = -Math.PI/2;
+  startMesh.position.set(sp.x, 0.015, sp.y);
+  trackGroup.add(startMesh);
+}
+
+// --- ROBOT MESH -------------------------------------------
+const robotGroup = new THREE.Group();
+scene.add(robotGroup);
+
+// Body
+const bodyMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(0.28, 0.07, 0.20),
+  new THREE.MeshBasicMaterial({color:0x1D9E75})
+);
+bodyMesh.position.y = 0.05;
+robotGroup.add(bodyMesh);
+
+// PCB detail
+const pcb = new THREE.Mesh(
+  new THREE.BoxGeometry(0.18, 0.01, 0.14),
+  new THREE.MeshBasicMaterial({color:0x0a4d2e})
+);
+pcb.position.set(0, 0.09, 0);
+robotGroup.add(pcb);
+
+// Sensor bar
+const sbar = new THREE.Mesh(
+  new THREE.BoxGeometry(0.24, 0.018, 0.035),
+  new THREE.MeshBasicMaterial({color:0xf0c040})
+);
+sbar.position.set(0.13, 0.025, 0);
+robotGroup.add(sbar);
+
+// Direction arrow
+const arrowMesh = new THREE.Mesh(
+  new THREE.ConeGeometry(0.025, 0.055, 8),
+  new THREE.MeshBasicMaterial({color:0xffffff})
+);
+arrowMesh.rotation.z = -Math.PI/2;
+arrowMesh.position.set(0.16, 0.10, 0);
+robotGroup.add(arrowMesh);
+
+// Wheels
+for(const [xo,zo] of [[0,0.115],[0,-0.115]]){
+  const w = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.055,0.055,0.04,14),
+    new THREE.MeshBasicMaterial({color:0x1a1a1a})
+  );
+  w.rotation.x = Math.PI/2;
+  w.position.set(xo, 0.03, zo);
+  robotGroup.add(w);
+  // tire ring
+  const ring = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.055,0.055,0.015,14,1,true),
+    new THREE.MeshBasicMaterial({color:0x444444})
+  );
+  ring.rotation.x = Math.PI/2;
+  ring.position.set(xo, 0.03, zo);
+  robotGroup.add(ring);
+}
+
+// Sensor dots (5)
+const SENSOR_Z = [-0.10, -0.05, 0, 0.05, 0.10];
+const sensorMeshes = [];
+for(const zo of SENSOR_Z){
+  const sm = new THREE.Mesh(
+    new THREE.SphereGeometry(0.013, 8, 8),
+    new THREE.MeshBasicMaterial({color:0xff2200})
+  );
+  sm.position.set(0.135, 0.018, zo);
+  robotGroup.add(sm);
+  sensorMeshes.push(sm);
+}
+
+// --- SIM STATE --------------------------------------------
+const state = {x:0, z:0, angle:0, vLeft:0, vRight:0};
+const pinVals = {};
+let running = false;
+let simSpeed = 1;
+let animId = null;
+
+function resetState(){
+  if(trackCurve){
+    const p0 = trackCurve.getPoint(0);
+    const p1 = trackCurve.getPoint(0.015);
+    state.x = p0.x; state.z = p0.y;
+    state.angle = Math.atan2(p1.y-p0.y, p1.x-p0.x);
+  } else if(customImageData) {
+    state.x = 0; state.z = 0; state.angle = 0;
+  } else {
+    state.x=0; state.z=0; state.angle=0;
+  }
+  state.vLeft=0; state.vRight=0;
+  Object.keys(pinVals).forEach(k=>delete pinVals[k]);
+  updateMesh();
+  for(let i=0;i<5;i++){
+    document.getElementById('led'+i).className='led off';
+    sensorMeshes[i].material.color.setHex(0xff2200);
+  }
+  document.getElementById('vel-hud').textContent='vL: 0 | vR: 0';
+}
+
+function updateMesh(){
+  robotGroup.position.set(state.x, 0.03, state.z);
+  robotGroup.rotation.y = -state.angle;
+  if (camMode === 'libre' && controls) {
+    const offset = perspCamera.position.clone().sub(controls.target);
+    controls.target.copy(robotGroup.position);
+    perspCamera.position.copy(controls.target).add(offset);
+    controls.update();
+  } else if (camMode === 'aerea') {
+    perspCamera.position.set(state.x, 4, state.z + 0.01);
+    perspCamera.lookAt(state.x, 0, state.z);
+  }
+}
+
+// --- SENSOR SAMPLING --------------------------------------
+function isOnBlack(wx, wz){
+  if (customImageData) {
+    const u = (wx + customPlaneWidth / 2) / customPlaneWidth;
+    const v = (wz + customPlaneHeight / 2) / customPlaneHeight;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return false;
+    const px = Math.floor(u * customImageData.width);
+    const py = Math.floor(v * customImageData.height);
+    const idx = (py * customImageData.width + px) * 4;
+    const r = customImageData.data[idx];
+    const g = customImageData.data[idx+1];
+    const b = customImageData.data[idx+2];
+    const brightness = (r + g + b) / 3;
+    return brightness < 128;
+  }
+
+  if(!trackCurve) return false;
+  const samples = 200;
+  let minD = Infinity;
+  for(let i=0;i<samples;i++){
+    const p = trackCurve.getPoint(i/samples);
+    const dx=wx-p.x, dz=wz-p.y;
+    const d=dx*dx+dz*dz;
+    if(d<minD) minD=d;
+  }
+  return Math.sqrt(minD) < 0.10;
+}
+
+function sampleSensors(){
+  const cos=Math.cos(state.angle), sin=Math.sin(state.angle);
+  const fwd=0.135;
+  for(let i=0;i<5;i++){
+    const zo=SENSOR_Z[i];
+    const wx = state.x + fwd*cos - zo*sin;
+    const wz = state.z + fwd*sin + zo*cos;
+    const black = isOnBlack(wx, wz);
+    const val = black ? 0 : 1023;
+    pinVals['A'+i] = val;
+    sensorMeshes[i].material.color.setHex(black ? 0x00ff88 : 0xff2200);
+    document.getElementById('led'+i).className = 'led ' + (black?'on':'off');
+  }
+}
+
+function physicsStep(dt){
+  // Escalar el dt para que la velocidad sea realista y no vibre violentamente
+  const simDt = dt * 0.005; 
+  const maxV  = 0.0028;
+  const wBase = 0.115;
+  const vL = state.vLeft  * maxV;
+  const vR = state.vRight * maxV;
+  const v  = (vL+vR)*0.5;
+  const omega = (vR-vL)/wBase;
+  
+  // Multiplicamos omega por 4 para que tenga suficiente radio de giro con el KP por defecto
+  state.angle -= omega * simDt * 4.0;
+  state.x += Math.cos(state.angle) * v * simDt;
+  state.z += Math.sin(state.angle) * v * simDt;
+}
+
+// --- ARDUINO RUNTIME --------------------------------------
+let setupFn=null, loopFn=null;
+let setupDone=false;
+let pendingDelay=10, loopTimer=0;
+let serialBuf=[], lastSerialFlush=0;
+
+function compileSketch(){
+  const src = editorCM.getValue();
+  const pwm={};
+
+  function updateMotors(){
+    const in1=pwm[5]||0, in2=pwm[6]||0;
+    const in3=pwm[9]||0, in4=pwm[10]||0;
+    state.vLeft  = in1 - in2;
+    state.vRight = in3 - in4;
+    document.getElementById('vel-hud').textContent =
+      'vL: '+Math.round(state.vLeft)+'  vR: '+Math.round(state.vRight);
+  }
+
+  const RT = {
+    pinMode:()=>{},
+    digitalWrite:(pin,val)=>{},
+    analogWrite:(pin,val)=>{
+      val=Math.max(0,Math.min(255,val));
+      pwm[pin]=val;
+      updateMotors();
+    },
+    digitalRead:()=>0,
+    analogRead:(pin)=>{
+      const k = typeof pin==='number' ? 'A'+pin : String(pin);
+      return pinVals[k]!==undefined ? pinVals[k] : 1023;
+    },
+    delay:(ms)=>{ pendingDelay+=Math.max(0,ms); },
+    millis:()=>Math.floor(performance.now()),
+    micros:()=>Math.floor(performance.now()*1000),
+    Serial:{begin:()=>{},println:(v)=>{serialBuf.push(String(v)+'\n');},print:(v)=>{serialBuf.push(String(v));}},
+    HIGH:1,LOW:0,OUTPUT:1,INPUT:0,INPUT_PULLUP:2,
+    A0:'A0',A1:'A1',A2:'A2',A3:'A3',A4:'A4',
+    constrain:(v,a,b)=>Math.max(a,Math.min(b,v)),
+    map:(v,il,ih,ol,oh)=>ol+(v-il)*(oh-ol)/(ih-il),
+    abs:Math.abs, min:Math.min, max:Math.max,
+    sqrt:Math.sqrt, pow:Math.pow, sin:Math.sin, cos:Math.cos,
+    PI:Math.PI
+  };
+
+  // Transpile C++ ? JS
+  function transpile(src){
+    // Paso 1: extraer #defines para reemplazar usos después
+    const defines = {};
+    src = src.replace(/#define\s+(\w+)\s+(.+)/g, (_, name, val) => {
+      defines[name] = val.trim();
+      return `/* #define ${name} ${val.trim()} */`;
+    });
+
+    // Paso 2: reemplazar usos de #define con word boundary
+    for(const [name, val] of Object.entries(defines)){
+      const re = new RegExp(`\\b${name}\\b`, 'g');
+      src = src.replace(re, val);
+    }
+
+    // Paso 3: expandir declaraciones múltiples "int a, b, c;" ? líneas separadas
+    const TYPES = 'unsigned int|unsigned long|int|long|float|double|byte|char|boolean|bool|String';
+    src = src.replace(
+      new RegExp(`\\b(${TYPES})\\s+((?:\\w+(?:\\s*=\\s*[^,;]+)?\\s*,\\s*)+\\w+(?:\\s*=\\s*[^,;]+)?)\\s*;`, 'g'),
+      (_, type, vars) => vars.split(',').map(v=>`${type} ${v.trim()};`).join('\n')
+    );
+
+    // Paso 4: void/typed functions ? JS functions
+    src = src.replace(/\bvoid\s+(\w+)\s*\(/g, 'function $1(');
+    src = src.replace(/\b(?:unsigned\s+)?(?:int|long|float|double|byte|char|boolean)\s+(\w+)\s*(?=\()/g, 'function $1');
+
+    // Paso 5: variable declarations
+    src = src.replace(/\b(?:unsigned\s+)?(?:int|long|float|double|byte|char|boolean)\s+(\w+)(\s*=\s*[^;{]+)?;/g,
+      (_, n, init) => `let ${n}${init ? init : '=0'};`);
+    src = src.replace(/\bbool\s+(\w+)(\s*=\s*[^;{]+)?;/g,
+      (_, n, init) => `let ${n}${init ? init : '=false'};`);
+    src = src.replace(/\bString\s+(\w+)(\s*=\s*[^;{]+)?;/g,
+      (_, n, init) => `let ${n}${init ? init : '=""'};`);
+
+    // Paso 6: misc
+    src = src.replace(/Serial\.println/g, 'Serial.println');
+    src = src.replace(/Serial\.print(?!l)/g, 'Serial.print');
+
+    return src;
+  }
+
+  let js = transpile(src);
+
+  try {
+    const fn = new Function(
+      'pinMode','digitalWrite','analogWrite','digitalRead','analogRead',
+      'delay','millis','micros','Serial',
+      'HIGH','LOW','OUTPUT','INPUT','INPUT_PULLUP',
+      'A0','A1','A2','A3','A4',
+      'constrain','map','abs','min','max','sqrt','pow','sin','cos','PI',
+      js + '\nreturn typeof setup!=="undefined"&&typeof loop!=="undefined"?{setup,loop}:null;'
+    );
+    const result = fn(
+      RT.pinMode,RT.digitalWrite,RT.analogWrite,RT.digitalRead,RT.analogRead,
+      RT.delay,RT.millis,RT.micros,RT.Serial,
+      RT.HIGH,RT.LOW,RT.OUTPUT,RT.INPUT,RT.INPUT_PULLUP,
+      RT.A0,RT.A1,RT.A2,RT.A3,RT.A4,
+      RT.constrain,RT.map,RT.abs,RT.min,RT.max,RT.sqrt,RT.pow,RT.sin,RT.cos,RT.PI
+    );
+    if(!result){ log('Error: no se encontró setup() o loop()','c-err'); return null; }
+    return result;
+  } catch(e){
+    log('Error de compilación: '+e.message,'c-err');
+    return null;
+  }
+}
+
+// --- MAIN ANIMATION LOOP ----------------------------------
+let lastT = 0;
+
+function tick(now){
+  animId = requestAnimationFrame(tick);
+  
+  if(!running){
+    if (camMode === 'libre' && controls) controls.update();
+    renderer.render(scene, activeCamera);
+    return;
+  }
+
+  const raw = Math.min(now - lastT, 50);
+  lastT = now;
+  const dt = raw * simSpeed;
+
+  sampleSensors();
+
+  if(!setupDone && setupFn){
+    try{ setupFn(); } catch(e){ log('Error en setup(): '+e.message,'c-err'); }
+    setupDone = true;
+    log('setup() ejecutado ?','c-ok');
+  }
+
+  if(setupDone && loopFn){
+    loopTimer += dt;
+    if(loopTimer >= pendingDelay){
+      loopTimer  = 0;
+      pendingDelay = 10;
+      try{ loopFn(); } catch(e){ log('Error en loop(): '+e.message,'c-err'); running=false; return; }
+    }
+  }
+
+  // flush Serial
+  if(serialBuf.length && now - lastSerialFlush > 150){
+    log('Serial: ' + serialBuf.join('').trim(), 'c-ser');
+    serialBuf=[];
+    lastSerialFlush = now;
+  }
+
+  physicsStep(dt);
+  updateMesh();
+  renderer.render(scene, activeCamera);
+}
+
+// --- BUTTON HANDLERS --------------------------------------
+document.getElementById('btnRun').onclick=()=>{
+  if(running) return;
+  log('--- Compilando sketch ---','c-sys');
+  const vm = compileSketch();
+  if(!vm) return;
+  setupFn=vm.setup; loopFn=vm.loop;
+  setupDone=false; pendingDelay=10; loopTimer=0;
+  running=true; lastT=performance.now();
+  document.getElementById('btnRun').disabled=true;
+  document.getElementById('btnStop').disabled=false;
+  log('Simulación iniciada','c-ok');
+};
+
+document.getElementById('btnStop').onclick=()=>{
+  running=false;
+  state.vLeft=0; state.vRight=0;
+  document.getElementById('btnRun').disabled=false;
+  document.getElementById('btnStop').disabled=true;
+  document.getElementById('vel-hud').textContent='vL: 0 | vR: 0';
+  log('Simulación detenida','c-sys');
+};
+
+document.getElementById('btnReset').onclick=()=>{
+  const wasRunning=running;
+  if(wasRunning) document.getElementById('btnStop').click();
+  resetState();
+  renderer.render(scene, activeCamera);
+  log('Robot reseteado','c-sys');
+  if(wasRunning) setTimeout(()=>document.getElementById('btnRun').click(),80);
+};
+
+document.getElementById('simSpeedRange').oninput=function(){
+  simSpeed=parseFloat(this.value);
+  document.getElementById('simSpeedVal').textContent=this.value+'x';
+};
+
+document.getElementById('trackSel').onchange=function(){
+  if (this.value === 'custom') {
+    this.value = customImageTex ? 'custom_loaded' : (window.currentTrackType || 'oval');
+    document.getElementById('trackUpload').click();
+    return;
+  }
+  window.currentTrackType = this.value;
+  document.querySelector('#trackSel option[value="custom_loaded"]').style.display = 'none';
+  const was=running;
+  if(was) document.getElementById('btnStop').click();
+  const trackType = this.value === 'custom_loaded' ? 'custom' : this.value;
+  buildTrack(trackType);
+  resetState();
+  renderer.render(scene, activeCamera);
+  log('Pista cambiada: '+this.value,'c-sys');
+  if(was) setTimeout(()=>document.getElementById('btnRun').click(),80);
+};
+
+document.getElementById('trackUpload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) {
+    document.getElementById('trackSel').value = 'oval';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const img = new Image();
+    img.onload = function() {
+      if(customImageTex) customImageTex.dispose();
+      customImageTex = new THREE.Texture(img);
+      customImageTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      customImageTex.minFilter = THREE.LinearFilter;
+      customImageTex.magFilter = THREE.LinearFilter;
+      customImageTex.generateMipmaps = false;
+      customImageTex.needsUpdate = true;
+      
+      const aspect = img.width / img.height;
+      if (aspect > 1.25) {
+        customPlaneWidth = 10;
+        customPlaneHeight = 10 / aspect;
+      } else {
+        customPlaneHeight = 8;
+        customPlaneWidth = 8 * aspect;
+      }
+      
+      customImgCanvas.width = img.width;
+      customImgCanvas.height = img.height;
+      customImgCtx.drawImage(img, 0, 0);
+      customImageData = customImgCtx.getImageData(0, 0, img.width, img.height);
+      
+      const was = running;
+      if(was) document.getElementById('btnStop').click();
+      
+      document.querySelector('#trackSel option[value="custom_loaded"]').style.display = 'block';
+      document.getElementById('trackSel').value = 'custom_loaded';
+      window.currentTrackType = 'custom_loaded';
+      
+      buildTrack('custom');
+      resetState();
+      renderer.render(scene, activeCamera);
+      log('Pista PNG cargada: ' + file.name, 'c-sys');
+      
+      document.getElementById('trackUpload').value = ''; // Limpiar para permitir elegir el mismo
+      
+      if(was) setTimeout(()=>document.getElementById('btnRun').click(),80);
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// --- CODEMIRROR INIT --------------------------------------
+const editorCM = CodeMirror.fromTextArea(document.getElementById('editor'), {
+  mode: "text/x-c++src",
+  theme: "darcula",
+  lineNumbers: true,
+  indentUnit: 2,
+  matchBrackets: true,
+  viewportMargin: Infinity
+});
+
+// --- CAMERAS ----------------------------------------------
+function setCamMode(mode){
+  camMode = mode;
+  document.querySelectorAll('.btn-cam').forEach(b => b.classList.remove('active'));
+  if(mode === 'libre') {
+    document.getElementById('btnCamLibre').classList.add('active');
+    activeCamera = perspCamera;
+    if(controls) {
+      controls.enabled = true;
+      controls.target.copy(robotGroup.position);
+      const offset = perspCamera.position.clone().sub(controls.target);
+      if(offset.lengthSq() < 0.1 || perspCamera.position.y > 3.5) {
+        perspCamera.position.set(state.x - 1.5, 1.5, state.z + 1.5);
+      }
+      controls.update();
+    }
+  } else if(mode === 'aerea') {
+    document.getElementById('btnCamAerea').classList.add('active');
+    activeCamera = perspCamera;
+    if(controls) controls.enabled = false;
+  } else if(mode === 'orto') {
+    document.getElementById('btnCamOrto').classList.add('active');
+    activeCamera = orthoCamera;
+    if(controls) controls.enabled = false;
+  }
+  updateMesh();
+  renderer.render(scene, activeCamera);
+}
+document.getElementById('btnCamLibre').onclick = () => setCamMode('libre');
+document.getElementById('btnCamAerea').onclick = () => setCamMode('aerea');
+document.getElementById('btnCamOrto').onclick  = () => setCamMode('orto');
+
+// --- INIT -------------------------------------------------
+buildTrack('oval');
+resetState();
+renderer.render(scene, activeCamera);
+log('Pista "óvalo" cargada — todo listo','c-ok');
+log('?? TIP: Mantené SHIFT y arrastrá en la pista para colocar el robot','c-sys');
+
+// --- HAND OF GOD (INTERACTIVE PLACEMENT) ------------------
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let isPlacing = false;
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (running) return;
+  if (!e.shiftKey) return;
+  e.preventDefault();
+  
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, activeCamera);
+  const intersects = raycaster.intersectObjects(trackGroup.children);
+  if (intersects.length > 0) {
+    isPlacing = true;
+    if (controls) controls.enabled = false;
+    state.x = intersects[0].point.x;
+    state.z = intersects[0].point.z;
+    updateMesh();
+  }
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!isPlacing) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, activeCamera);
+  const intersects = raycaster.intersectObjects(trackGroup.children);
+  if (intersects.length > 0) {
+    const dx = intersects[0].point.x - state.x;
+    const dz = intersects[0].point.z - state.z;
+    if (dx*dx + dz*dz > 0.001) {
+      state.angle = Math.atan2(dz, dx);
+    }
+    updateMesh();
+  }
+});
+
+window.addEventListener('pointerup', () => {
+  if (isPlacing) {
+    isPlacing = false;
+    if (controls && camMode === 'libre') controls.enabled = true;
+  }
+});
+
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
