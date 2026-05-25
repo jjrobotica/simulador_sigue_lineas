@@ -13,17 +13,25 @@
     }
 
     :root {
-      --bg: #0d1117;
-      --bg2: #161b22;
-      --bg3: #21262d;
+      --jj-primary: #0988af;
+      --jj-primary-mid: #017fa5;
+      --jj-primary-dark: #006280;
+      --jj-accent: #1fb5e2;
+      --jj-accent-2: #39c3dc;
+      --jj-success: #1D9E75;
+      --jj-success-dark: #188660;
+      --jj-warning: #F0B648;
+      --bg: #0f172a;
+      --bg2: #142234;
+      --bg3: #243447;
       --green: #1D9E75;
-      --green2: #0F6E56;
-      --text: #c9d1d9;
-      --text2: #8b949e;
-      --border: #30363d;
-      --yellow: #f0c040;
-      --red: #f97583;
-      --blue: #79c0ff;
+      --green2: #188660;
+      --text: #e2e8f0;
+      --text2: #cbd5e1;
+      --border: rgba(148, 163, 184, .32);
+      --yellow: #F0B648;
+      --red: #EF5350;
+      --blue: #38bdf8;
     }
 
     body {
@@ -42,15 +50,17 @@
       gap: 10px;
       padding: 0 16px;
       height: 46px;
-      background: var(--bg2);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0
+      background: var(--jj-primary);
+      border-bottom: 1px solid rgba(255, 255, 255, .18);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .22);
+      flex-shrink: 0;
+      z-index: 20
     }
 
     #toolbar h1 {
       font-size: 14px;
       font-weight: 700;
-      color: var(--green);
+      color: #fff;
       letter-spacing: .1em;
       margin-right: 4px
     }
@@ -59,13 +69,44 @@
       font-size: 11px;
       padding: 2px 8px;
       border-radius: 4px;
-      background: var(--bg3);
-      color: var(--text2);
-      border: 1px solid var(--border)
+      background: rgba(255, 255, 255, .13);
+      color: #def4ff;
+      border: 1px solid rgba(255, 255, 255, .24)
     }
 
     .sep {
       flex: 1
+    }
+
+    #panelSwitch {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(57, 195, 220, .75);
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(0, 98, 128, .18);
+      flex-shrink: 0;
+    }
+
+    .panel-btn {
+      border: none;
+      background: transparent;
+      color: #def4ff;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 7px 12px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .panel-btn + .panel-btn {
+      border-left: 1px solid rgba(57, 195, 220, .35)
+    }
+
+    .panel-btn.active {
+      background: var(--jj-accent);
+      color: #fff
     }
 
     .btn {
@@ -73,9 +114,9 @@
       font-family: 'Courier New', monospace;
       padding: 5px 14px;
       border-radius: 6px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, .28);
+      background: var(--jj-primary-mid);
+      color: #fff;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -84,28 +125,28 @@
     }
 
     .btn:hover {
-      background: var(--bg3)
+      background: var(--jj-primary-dark)
     }
 
     .btn.run {
-      background: var(--green);
+      background: var(--jj-success);
       color: #fff;
-      border-color: var(--green2);
+      border-color: rgba(255, 255, 255, .24);
       font-weight: 700
     }
 
     .btn.run:hover {
-      background: var(--green2)
+      background: var(--jj-success-dark)
     }
 
     .btn.stop {
-      background: #a32d2d;
+      background: var(--red);
       color: #fff;
-      border-color: #791f1f
+      border-color: rgba(255, 255, 255, .24)
     }
 
     .btn.stop:hover {
-      background: #791f1f
+      background: #e14542
     }
 
     .btn:disabled {
@@ -118,32 +159,53 @@
       align-items: center;
       gap: 6px;
       font-size: 11px;
-      color: var(--text2)
+      color: #def4ff
     }
 
     #speed-wrap input[type=range] {
       width: 75px;
-      accent-color: var(--green)
+      accent-color: var(--jj-accent)
     }
 
     #main {
       display: grid;
-      grid-template-columns: 1fr 390px;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 28vw);
       flex: 1;
-      overflow: hidden
+      overflow: hidden;
+      min-height: 0
+    }
+
+    body[data-mobile-panel="sim"] #main,
+    body[data-mobile-panel="code"] #main {
+      grid-template-columns: minmax(0, 1fr)
+    }
+
+    body[data-mobile-panel="sim"] #right {
+      display: none
+    }
+
+    body[data-mobile-panel="code"] #left {
+      display: none
+    }
+
+    body[data-mobile-panel="code"] #right {
+      border-left: none
     }
 
     #left {
       display: flex;
       flex-direction: column;
-      overflow: hidden
+      overflow: hidden;
+      min-width: 0;
+      min-height: 0
     }
 
     #canvas-wrap {
       flex: 1;
       position: relative;
       background: #111827;
-      overflow: hidden
+      overflow: hidden;
+      min-height: 0
     }
 
     #simCanvas {
@@ -234,7 +296,7 @@
       gap: 6px;
       align-items: center;
       font-size: 11px;
-      color: var(--text2)
+      color: #def4ff
     }
 
     #track-wrap select {
@@ -242,16 +304,16 @@
       font-family: 'Courier New', monospace;
       padding: 3px 6px;
       border-radius: 4px;
-      border: 1px solid var(--border);
-      background: var(--bg3);
-      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, .28);
+      background: rgba(0, 98, 128, .38);
+      color: #fff;
       cursor: pointer
     }
 
     #console {
       height: 160px;
-      background: #0a0e14;
-      border-top: 2px solid var(--green);
+      background: #08111d;
+      border-top: 2px solid var(--jj-accent);
       overflow-y: auto;
       padding: 8px 12px;
       font-size: 11px;
@@ -279,7 +341,9 @@
       display: flex;
       flex-direction: column;
       border-left: 1px solid var(--border);
-      overflow: hidden
+      overflow: hidden;
+      min-width: 0;
+      min-height: 0
     }
 
     #editor-header {
@@ -295,7 +359,7 @@
     }
 
     #editor-header span {
-      color: var(--green);
+      color: var(--jj-accent);
       font-weight: 700
     }
 
@@ -309,7 +373,7 @@
       font-family: 'Courier New', monospace;
       font-size: 12px;
       background: #0d1117 !important;
-      color: #c9d1d9 !important;
+      color: #e2e8f0 !important;
     }
 
     .CodeMirror-gutters {
@@ -355,7 +419,7 @@
     }
 
     .pm-val {
-      color: var(--green);
+      color: var(--jj-accent);
       font-weight: 700
     }
 
@@ -365,27 +429,27 @@
       padding: 3px 6px;
       border-radius: 4px;
       border: 1px solid var(--border);
-      background: var(--bg3);
+      background: rgba(15, 23, 42, .82);
       color: var(--text);
       cursor: pointer;
       transition: all .15s;
     }
 
     .btn-cam:hover {
-      background: var(--bg2);
+      background: var(--jj-primary-dark);
     }
 
     .btn-cam.active {
-      background: var(--green);
+      background: var(--jj-accent);
       color: #fff;
-      border-color: var(--green2);
+      border-color: rgba(255, 255, 255, .28);
       font-weight: 700;
     }
 
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(1, 4, 9, .72);
+      background: rgba(2, 6, 23, .66);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -402,7 +466,8 @@
       width: min(680px, calc(100vw - 32px));
       max-height: calc(100vh - 32px);
       overflow: auto;
-      background: var(--bg2);
+      background: #f8fafc;
+      color: #0f172a;
       border: 1px solid var(--border);
       border-radius: 14px;
       box-shadow: 0 24px 80px rgba(0, 0, 0, .55)
@@ -414,26 +479,28 @@
       justify-content: space-between;
       gap: 12px;
       padding: 16px 18px;
-      border-bottom: 1px solid var(--border)
+      background: linear-gradient(135deg, var(--jj-primary), var(--jj-accent));
+      border-bottom: 1px solid rgba(255, 255, 255, .24);
+      color: #fff
     }
 
     .modal-head h2 {
       font-size: 15px;
-      color: var(--green);
+      color: #fff;
       letter-spacing: .06em;
       margin-bottom: 4px
     }
 
     .modal-head p {
       font-size: 11px;
-      color: var(--text2);
+      color: #def4ff;
       line-height: 1.4
     }
 
     .modal-close {
       border: 1px solid var(--border);
-      background: var(--bg3);
-      color: var(--text);
+      background: rgba(255, 255, 255, .16);
+      color: #fff;
       border-radius: 8px;
       width: 30px;
       height: 30px;
@@ -443,7 +510,7 @@
     }
 
     .modal-close:hover {
-      background: #2b323b
+      background: rgba(255, 255, 255, .24)
     }
 
     .modal-body {
@@ -460,8 +527,8 @@
     }
 
     .setting-block {
-      background: #0d1117;
-      border: 1px solid var(--border);
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
       border-radius: 10px;
       padding: 12px
     }
@@ -472,12 +539,12 @@
       justify-content: space-between;
       gap: 8px;
       font-size: 11px;
-      color: var(--text2);
+      color: #334155;
       margin-bottom: 8px
     }
 
     .setting-value {
-      color: var(--green);
+      color: var(--jj-primary);
       font-weight: 700
     }
 
@@ -489,15 +556,15 @@
 
     .setting-inputs input[type=range] {
       flex: 1;
-      accent-color: var(--green)
+      accent-color: var(--jj-accent)
     }
 
     .setting-inputs input[type=number] {
       width: 68px;
       background: var(--bg3);
-      border: 1px solid var(--border);
+      border: 1px solid #94a3b8;
       border-radius: 6px;
-      color: var(--text);
+      color: #0f172a;
       font-family: 'Courier New', monospace;
       font-size: 12px;
       padding: 5px
@@ -505,13 +572,13 @@
 
     .settings-note {
       font-size: 10px;
-      color: var(--text2);
+      color: #475569;
       line-height: 1.45
     }
 
     .nose-preview {
-      background: #0d1117;
-      border: 1px solid var(--border);
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
       border-radius: 12px;
       padding: 12px;
       min-height: 260px
@@ -522,20 +589,20 @@
       align-items: center;
       justify-content: space-between;
       font-size: 11px;
-      color: var(--text2);
+      color: #334155;
       margin-bottom: 10px
     }
 
     .nose-title strong {
-      color: var(--green)
+      color: var(--jj-primary)
     }
 
     .nose-canvas {
       position: relative;
       height: 178px;
       border-radius: 10px;
-      background: linear-gradient(180deg, #202832, #0f141b);
-      border: 1px solid #2b3440;
+      background: linear-gradient(180deg, #e8edf5, #dbeafe);
+      border: 1px solid #cbd5e1;
       overflow: hidden
     }
 
@@ -546,8 +613,8 @@
       transform: translateX(-50%);
       width: 54%;
       height: 88px;
-      background: #1D9E75;
-      border: 2px solid #33c99b;
+      background: var(--jj-success);
+      border: 2px solid #5BBF6A;
       border-radius: 10px 10px 4px 4px;
       box-shadow: inset 0 -18px 0 rgba(0, 0, 0, .16)
     }
@@ -571,7 +638,7 @@
       bottom: 48px;
       height: 18px;
       background: #151a22;
-      border: 2px solid #3f4650;
+      border: 2px solid #4F86B5;
       border-radius: 6px
     }
 
@@ -595,7 +662,7 @@
       top: 22px;
       transform: translateX(-50%);
       font-size: 10px;
-      color: var(--text2)
+      color: #475569
     }
 
     .preview-sensor.active {
@@ -616,14 +683,14 @@
     .settings-pins {
       margin-top: 10px;
       font-size: 10px;
-      color: var(--text2);
+      color: #475569;
       line-height: 1.5
     }
 
     .settings-pins code {
-      color: var(--green);
-      background: #111820;
-      border: 1px solid var(--border);
+      color: var(--jj-primary-dark);
+      background: #e8edf5;
+      border: 1px solid #cbd5e1;
       border-radius: 4px;
       padding: 1px 4px
     }
@@ -632,6 +699,174 @@
       display: flex;
       justify-content: flex-end;
       padding: 0 18px 16px
+    }
+
+    @media (max-width:900px) {
+      body {
+        height: 100dvh;
+        overflow: hidden
+      }
+
+      #toolbar {
+        height: auto;
+        min-height: 50px;
+        padding: 6px 8px;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-content: center
+      }
+
+      #toolbar h1 {
+        font-size: 15px;
+        letter-spacing: .06em
+      }
+
+      #toolbar .tag {
+        display: none
+      }
+
+      #panelSwitch {
+        order: 2
+      }
+
+      .desktop-panel-only {
+        display: none
+      }
+
+      #track-wrap {
+        order: 3;
+        flex: 1 1 160px;
+        min-width: 145px
+      }
+
+      #track-wrap select {
+        max-width: 142px
+      }
+
+      .sep {
+        display: none
+      }
+
+      #btnSettings {
+        order: 4
+      }
+
+      #speed-wrap {
+        order: 5;
+        flex: 1 1 130px
+      }
+
+      #speed-wrap input[type=range] {
+        width: min(110px, 28vw)
+      }
+
+      #btnRun,
+      #btnStop,
+      #btnReset {
+        order: 6
+      }
+
+      #main {
+        display: block;
+        flex: 1 1 auto;
+        min-height: 0
+      }
+
+      #left,
+      #right {
+        height: 100%;
+        width: 100%;
+        min-height: 0
+      }
+
+      #right {
+        border-left: none
+      }
+
+      body[data-mobile-panel="sim"] #left {
+        display: flex
+      }
+
+      body[data-mobile-panel="sim"] #right {
+        display: none
+      }
+
+      body[data-mobile-panel="code"] #left {
+        display: none
+      }
+
+      body[data-mobile-panel="code"] #right {
+        display: flex
+      }
+
+      #canvas-wrap {
+        min-height: 0
+      }
+
+      #console {
+        height: 112px;
+        font-size: 10px;
+        padding: 7px 8px
+      }
+
+      #hud {
+        top: 8px;
+        left: 8px;
+        gap: 5px
+      }
+
+      #editor-header {
+        padding: 8px 10px
+      }
+
+      #pinmap {
+        max-height: 138px;
+        overflow: auto;
+        padding: 8px 10px
+      }
+
+      .pm-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    @media (max-width:520px) {
+      #toolbar {
+        padding: 5px 6px
+      }
+
+      .panel-btn {
+        padding: 7px 9px;
+        font-size: 11px
+      }
+
+      .btn {
+        padding: 6px 9px;
+        font-size: 11px
+      }
+
+      #btnStop {
+        display: none
+      }
+
+      #speed-wrap {
+        font-size: 10px
+      }
+
+      #console {
+        height: 92px
+      }
+
+      .CodeMirror {
+        font-size: 11px
+      }
+
+      #vel-hud {
+        max-width: calc(100vw - 18px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap
+      }
     }
 
     @media (max-width:760px) {
@@ -650,12 +885,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
 </head>
 
-<body>
+<body data-mobile-panel="sim">
 
   <div id="toolbar">
     <h1>⬛ RoboSim</h1>
     <span class="tag">v1.0</span>
     <span class="tag">Seguidor de Línea</span>
+    <div id="panelSwitch" aria-label="Cambiar panel">
+      <button class="panel-btn desktop-panel-only" data-panel="both" type="button">Ambos</button>
+      <button class="panel-btn" data-panel="sim" type="button">Simulador</button>
+      <button class="panel-btn" data-panel="code" type="button">Código</button>
+    </div>
     <div id="track-wrap">
       &nbsp;Pista:
       <select id="trackSel">
@@ -1624,6 +1864,7 @@ const pinVals = {};
 let running = false;
 let simSpeed = 1;
 let animId = null;
+let currentMobilePanel = window.innerWidth > 900 ? 'both' : 'sim';
 
 window.__robosimV2Debug = () => ({
   running,
@@ -1635,6 +1876,9 @@ window.__robosimV2Debug = () => ({
   actualVL: state.actualVL,
   actualVR: state.actualVR,
   pidOscillation: state.pidOscillation,
+  visualJitterX: state.visualJitterX,
+  visualJitterY: state.visualJitterY,
+  visualJitterZ: state.visualJitterZ,
   visualJitterYaw: state.visualJitterYaw,
   sensorCount,
   sensorSepMm,
@@ -1704,8 +1948,8 @@ function pwmToWheelSpeed(pwm, gain) {
       const oscRate = targetOscillation > state.pidOscillation ? RACER_PID_OSC_RISE : RACER_PID_OSC_FALL;
       state.pidOscillation = approachValue(state.pidOscillation, targetOscillation, oscRate, dtSec);
       const speedDemand = Math.min(1, (Math.abs(targetVL) + Math.abs(targetVR)) / (RACER_MAX_LINEAR_SPEED * 2));
-      const oscillationShake = Math.pow(Math.max(0, state.pidOscillation - 0.12) / 0.88, 2.0);
-      const ripple = RACER_PID_VIBRATION_GAIN * (0.03 + oscillationShake * 2.60) * speedDemand;
+      const oscillationShake = Math.pow(Math.max(0, state.pidOscillation - 0.12) / 0.88, 3.0);
+      const ripple = RACER_PID_VIBRATION_GAIN * (0.03 + oscillationShake * 4.60) * speedDemand;
       targetVL *= 1 + Math.sin(state.simTime * 86 + 0.7) * ripple + Math.sin(state.simTime * 151 + 2.1) * ripple * 0.35;
       targetVR *= 1 + Math.sin(state.simTime * 91 + 2.8) * ripple + Math.sin(state.simTime * 143 + 0.3) * ripple * 0.35;
       state.lastTargetVL = targetVL;
@@ -1734,11 +1978,15 @@ function pwmToWheelSpeed(pwm, gain) {
         state.actualVR *= drag;
       }
 
-      const visualShake = Math.min(1.2, speedDemand * (0.012 + oscillationShake * 3.00));
-      state.visualJitterYaw = Math.sin(state.simTime * 95) * 0.030 * visualShake;
-      state.visualJitterX = Math.sin(state.simTime * 123 + 0.4) * 0.011 * visualShake;
-      state.visualJitterY = Math.abs(Math.sin(state.simTime * 118 + 1.2)) * 0.008 * visualShake;
-      state.visualJitterZ = Math.sin(state.simTime * 137 + 1.8) * 0.011 * visualShake;
+      const visualShake = Math.min(1.2, speedDemand * (0.012 + oscillationShake * 5.20));
+      const steerDirection = Math.max(-1, Math.min(1, diffTarget / (RACER_MAX_LINEAR_SPEED * 0.75)));
+      const motorPulse =
+        Math.sin(state.simTime * 96) * 0.032 +
+        Math.sin(state.simTime * 151 + 0.8) * 0.012;
+      state.visualJitterYaw = (motorPulse + steerDirection * 0.010) * visualShake;
+      state.visualJitterX = 0;
+      state.visualJitterY = 0;
+      state.visualJitterZ = 0;
 
       state.wheelSpinLeft = (state.wheelSpinLeft - (state.actualVL / RACER_WHEEL_RADIUS) * dtSec) % (Math.PI * 2);
       state.wheelSpinRight = (state.wheelSpinRight - (state.actualVR / RACER_WHEEL_RADIUS) * dtSec) % (Math.PI * 2);
@@ -1782,24 +2030,24 @@ function pwmToWheelSpeed(pwm, gain) {
       robotGroup.position.copy(chassisBody.position); // for camera
       chassisMesh.position.copy(chassisBody.position);
       chassisMesh.quaternion.copy(chassisBody.quaternion);
-      let jitterOffset = null;
-      let jitterQ = null;
-      if (state.visualJitterX || state.visualJitterY || state.visualJitterZ || state.visualJitterYaw) {
-        jitterOffset = new THREE.Vector3(state.visualJitterX, state.visualJitterY, state.visualJitterZ);
-        jitterOffset.applyQuaternion(chassisMesh.quaternion);
-        chassisMesh.position.add(jitterOffset);
-        jitterQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.visualJitterYaw);
-        chassisMesh.quaternion.multiply(jitterQ);
-      }
       leftWheelMesh.position.copy(leftWheelBody.position);
       leftWheelMesh.quaternion.copy(getWheelWorldQuaternion(state.wheelSpinLeft));
       rightWheelMesh.position.copy(rightWheelBody.position);
       rightWheelMesh.quaternion.copy(getWheelWorldQuaternion(state.wheelSpinRight));
-      if (jitterOffset && jitterQ) {
-        leftWheelMesh.position.add(jitterOffset);
-        leftWheelMesh.quaternion.multiply(jitterQ);
-        rightWheelMesh.position.add(jitterOffset);
-        rightWheelMesh.quaternion.multiply(jitterQ);
+
+      if (state.visualJitterYaw) {
+        const basePos = new THREE.Vector3(chassisBody.position.x, chassisBody.position.y, chassisBody.position.z);
+        const baseQuat = new THREE.Quaternion(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
+        const pivotWorld = new THREE.Vector3(WHEEL_X, 0, 0).applyQuaternion(baseQuat).add(basePos);
+        const yawQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.visualJitterYaw);
+        const applyRearAxleYaw = (mesh) => {
+          const rel = mesh.position.clone().sub(pivotWorld).applyQuaternion(yawQ);
+          mesh.position.copy(pivotWorld).add(rel);
+          mesh.quaternion.premultiply(yawQ);
+        };
+        applyRearAxleYaw(chassisMesh);
+        applyRearAxleYaw(leftWheelMesh);
+        applyRearAxleYaw(rightWheelMesh);
       }
       state.x = chassisBody.position.x;
       state.z = chassisBody.position.z;
@@ -2045,6 +2293,30 @@ function pwmToWheelSpeed(pwm, gain) {
       renderer.render(scene, activeCamera);
     }
 
+
+    function syncPanelButtons() {
+      document.querySelectorAll('.panel-btn[data-panel]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.panel === currentMobilePanel);
+      });
+    }
+
+    function refreshResponsivePanel() {
+      resize();
+      if (editorCM) editorCM.refresh();
+      updateMesh();
+      renderer.render(scene, activeCamera);
+    }
+
+    function setMobilePanel(panel) {
+      const isDesktop = window.innerWidth > 900;
+      if (panel === 'both' && isDesktop) currentMobilePanel = 'both';
+      else currentMobilePanel = panel === 'code' ? 'code' : 'sim';
+
+      document.body.setAttribute('data-mobile-panel', currentMobilePanel);
+      syncPanelButtons();
+      requestAnimationFrame(refreshResponsivePanel);
+    }
+
     // ─── BUTTON HANDLERS ──────────────────────────────────────
     document.getElementById('btnRun').onclick = async () => {
       if (running) return;
@@ -2079,6 +2351,15 @@ function pwmToWheelSpeed(pwm, gain) {
       log('Robot reseteado', 'c-sys');
       if (wasRunning) setTimeout(() => document.getElementById('btnRun').click(), 80);
     };
+
+    document.querySelectorAll('.panel-btn[data-panel]').forEach(btn => {
+      btn.addEventListener('click', () => setMobilePanel(btn.dataset.panel));
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth <= 900 && currentMobilePanel === 'both') setMobilePanel('sim');
+      else requestAnimationFrame(refreshResponsivePanel);
+    });
 
     function openSettingsModal() {
       const modal = document.getElementById('settingsModal');
@@ -2217,6 +2498,7 @@ function pwmToWheelSpeed(pwm, gain) {
       viewportMargin: Infinity
     });
     applySensorSettings(SENSOR_DEFAULT_COUNT, SENSOR_DEFAULT_SEP_MM, { updateSketch: true, sample: false });
+    setMobilePanel(window.innerWidth > 900 ? 'both' : 'sim');
 
     // ─── CAMERAS ──────────────────────────────────────────────
     function setCamMode(mode) {
