@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RoboSim — Seguidor de Línea Arduino</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --green: #1D9E75;
+      --green2: #0F6E56;
+      --text: #c9d1d9;
+      --text2: #8b949e;
+      --border: #30363d;
+      --yellow: #f0c040;
+      --red: #f97583;
+      --blue: #79c0ff;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    #toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      height: 46px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0
+    }
+
+    #toolbar h1 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: .1em;
+      margin-right: 4px
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--bg3);
+      color: var(--text2);
+      border: 1px solid var(--border)
+    }
+
+    .sep {
+      flex: 1
+    }
+
+    .btn {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all .15s
+    }
+
+    .btn:hover {
+      background: var(--bg3)
+    }
+
+    .btn.run {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green2);
+      font-weight: 700
+    }
+
+    .btn.run:hover {
+      background: var(--green2)
+    }
+
+    .btn.stop {
+      background: #a32d2d;
+      color: #fff;
+      border-color: #791f1f
+    }
+
+    .btn.stop:hover {
+      background: #791f1f
+    }
+
+    .btn:disabled {
+      opacity: .35;
+      cursor: not-allowed
+    }
+
+    #speed-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text2)
+    }
+
+    #speed-wrap input[type=range] {
+      width: 75px;
+      accent-color: var(--green)
+    }
+
+    #main {
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      flex: 1;
+      overflow: hidden
+    }
+
+    #left {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      background: #111827;
+      overflow: hidden
+    }
+
+    #simCanvas {
+      width: 100%;
+      height: 100%;
+      display: block
+    }
+
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    #sensors-row {
+      display: flex;
+      gap: 5px;
+      align-items: center
+    }
+
+    .s-label {
+      font-size: 10px;
+      color: var(--text2)
+    }
+
+    .led {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #444;
+      transition: all .08s
+    }
+
+    .led.on {
+      background: #fff;
+      border-color: #fff;
+      box-shadow: 0 0 8px #fff
+    }
+
+    .led.off {
+      background: #1a1a1a
+    }
+
+    .tel-bar {
+      width: 16px;
+      height: 40px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      border-radius: 2px;
+    }
+
+    .tel-fill {
+      width: 100%;
+      background: var(--green);
+      height: 0%;
+      transition: height 0.05s;
+    }
+
+    .tel-val {
+      position: absolute;
+      bottom: -14px;
+      width: 100%;
+      text-align: center;
+      font-size: 9px;
+      color: var(--text2);
+      font-family: 'Courier New', monospace;
+    }
+
+    #vel-hud {
+      font-size: 11px;
+      color: var(--text2);
+      background: rgba(0, 0, 0, .6);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      margin-top: 14px;
+    }
+
+    #track-wrap {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text2)
+    }
+
+    #track-wrap select {
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      padding: 3px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text);
+      cursor: pointer
+    }
+
+    #console {
+      height: 160px;
+      background: #0a0e14;
+      border-top: 2px solid var(--green);
+      overflow-y: auto;
+      padding: 8px 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      flex-shrink: 0
+    }
+
+    .c-sys {
+      color: var(--blue)
+    }
+
+    .c-err {
+      color: var(--red)
+    }
+
+    .c-ok {
+      color: var(--green)
+    }
+
+    .c-ser {
+      color: var(--yellow)
+    }
+
+    #right {
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid var(--border);
+      overflow: hidden
+    }
+
+    #editor-header {
+      padding: 8px 14px;
+      font-size: 11px;
+      color: var(--text2);
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0
+    }
+
+    #editor-header span {
+      color: var(--green);
+      font-weight: 700
+    }
+
+    #editor {
+      display: none
+    }
+
+    .CodeMirror {
+      flex: 1;
+      height: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      background: #0d1117 !important;
+      color: #c9d1d9 !important;
+    }
+
+    .CodeMirror-gutters {
+      background: #0d1117 !important;
+      border-right: 1px solid var(--border) !important;
+    }
+
+    #pinmap {
+      padding: 10px 14px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      flex-shrink: 0
+    }
+
+    .pm-title {
+      color: var(--text2);
+      margin-bottom: 6px;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase
+    }
+
+    .pm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 10px
+    }
+
+    .pm-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      border-bottom: 1px solid #21262d
+    }
+
+    .pm-row:last-child {
+      border: none
+    }
+
+    .pm-key {
+      color: var(--text2)
+    }
+
+    .pm-val {
+      color: var(--green);
+      font-weight: 700
+    }
+
+    .btn-cam {
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      padding: 3px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text);
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-cam:hover {
+      background: var(--bg2);
+    }
+
+    .btn-cam.active {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green2);
+      font-weight: 700;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(1, 4, 9, .72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 16px;
+      backdrop-filter: blur(3px)
+    }
+
+    .modal-backdrop.hidden {
+      display: none
+    }
+
+    .modal-card {
+      width: min(680px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .55)
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .modal-head h2 {
+      font-size: 15px;
+      color: var(--green);
+      letter-spacing: .06em;
+      margin-bottom: 4px
+    }
+
+    .modal-head p {
+      font-size: 11px;
+      color: var(--text2);
+      line-height: 1.4
+    }
+
+    .modal-close {
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text);
+      border-radius: 8px;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1
+    }
+
+    .modal-close:hover {
+      background: #2b323b
+    }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 16px;
+      padding: 16px 18px 18px
+    }
+
+    .settings-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px
+    }
+
+    .setting-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px
+    }
+
+    .setting-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text2);
+      margin-bottom: 8px
+    }
+
+    .setting-value {
+      color: var(--green);
+      font-weight: 700
+    }
+
+    .setting-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .setting-inputs input[type=range] {
+      flex: 1;
+      accent-color: var(--green)
+    }
+
+    .setting-inputs input[type=number] {
+      width: 68px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 5px
+    }
+
+    .settings-note {
+      font-size: 10px;
+      color: var(--text2);
+      line-height: 1.45
+    }
+
+    .nose-preview {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 260px
+    }
+
+    .nose-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text2);
+      margin-bottom: 10px
+    }
+
+    .nose-title strong {
+      color: var(--green)
+    }
+
+    .nose-canvas {
+      position: relative;
+      height: 178px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #202832, #0f141b);
+      border: 1px solid #2b3440;
+      overflow: hidden
+    }
+
+    .nose-body {
+      position: absolute;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      width: 54%;
+      height: 88px;
+      background: #1D9E75;
+      border: 2px solid #33c99b;
+      border-radius: 10px 10px 4px 4px;
+      box-shadow: inset 0 -18px 0 rgba(0, 0, 0, .16)
+    }
+
+    .nose-arrow {
+      position: absolute;
+      left: 50%;
+      top: 44px;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 36px solid rgba(255, 255, 255, .9)
+    }
+
+    .nose-bar {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: 48px;
+      height: 18px;
+      background: #151a22;
+      border: 2px solid #3f4650;
+      border-radius: 6px
+    }
+
+    .preview-sensor {
+      position: absolute;
+      bottom: 42px;
+      width: 18px;
+      height: 18px;
+      margin-left: -9px;
+      border-radius: 50%;
+      background: #111;
+      border: 2px solid #ff3344;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, .25);
+      transition: left .12s ease, border-color .12s ease
+    }
+
+    .preview-sensor::after {
+      content: attr(data-pin);
+      position: absolute;
+      left: 50%;
+      top: 22px;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: var(--text2)
+    }
+
+    .preview-sensor.active {
+      background: #00d48c;
+      border-color: #00ffb0
+    }
+
+    .preview-ruler {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--yellow)
+    }
+
+    .settings-pins {
+      margin-top: 10px;
+      font-size: 10px;
+      color: var(--text2);
+      line-height: 1.5
+    }
+
+    .settings-pins code {
+      color: var(--green);
+      background: #111820;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 4px
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0 18px 16px
+    }
+
+    @media (max-width:760px) {
+      .modal-body {
+        grid-template-columns: 1fr
+      }
+
+      .modal-card {
+        width: calc(100vw - 20px)
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/darcula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+</head>
+
+<body>
+
+  <div id="toolbar">
+    <h1>⬛ RoboSim</h1>
+    <span class="tag">v1.0</span>
+    <span class="tag">Seguidor de Línea</span>
+    <div id="track-wrap">
+      &nbsp;Pista:
+      <select id="trackSel">
+        <option value="oval">Óvalo</option>
+        <option value="figure8">Figura 8</option>
+        <option value="zigzag">Zigzag</option>
+        <option value="custom_loaded" style="display:none">Pista Personalizada</option>
+        <option value="custom">📁 Cargar PNG...</option>
+      </select>
+      <input type="file" id="trackUpload" accept="image/png, image/jpeg" style="display:none">
+    </div>
+    <div class="sep"></div>
+    <button class="btn" id="btnSettings" title="Ajustes de sensores"><span aria-hidden="true">&#128295;</span>
+      Ajustes</button>
+    <div id="speed-wrap">
+      Vel sim:
+      <input type="range" min="0.5" max="4" step="0.5" value="1" id="simSpeedRange">
+      <span id="simSpeedVal">1x</span>
+    </div>
+    <button class="btn run" id="btnRun">▶ Ejecutar</button>
+    <button class="btn stop" id="btnStop" disabled>■ Detener</button>
+    <button class="btn" id="btnReset">↺ Reset</button>
+  </div>
+
+  <div id="main">
+    <div id="left">
+      <div id="canvas-wrap">
+        <canvas id="simCanvas"></canvas>
+        <div id="hud">
+          <div id="cam-row" style="display:flex; gap:4px; margin-bottom: 6px;">
+            <button class="btn-cam active" id="btnCamLibre">Libre</button>
+            <button class="btn-cam" id="btnCamAerea">Aérea</button>
+            <button class="btn-cam" id="btnCamOrto">Orto</button>
+          </div>
+          <div id="sensors-row">
+            <span class="s-label">IR:</span>
+            <div class="led off" id="led0" title="A0-S0 izq extra"></div>
+            <div class="led off" id="led1" title="A1-S1 izq"></div>
+            <div class="led off" id="led2" title="A2-S2 centro"></div>
+            <div class="led off" id="led3" title="A3-S3 der"></div>
+            <div class="led off" id="led4" title="A4-S4 der extra"></div>
+          </div>
+          <div id="telemetry-row" style="display:flex; gap:5px; margin-top:2px; padding-left: 24px;">
+            <div class="tel-bar" title="A0">
+              <div class="tel-fill" id="tel0"></div>
+              <div class="tel-val" id="tval0">0</div>
+            </div>
+            <div class="tel-bar" title="A1">
+              <div class="tel-fill" id="tel1"></div>
+              <div class="tel-val" id="tval1">0</div>
+            </div>
+            <div class="tel-bar" title="A2">
+              <div class="tel-fill" id="tel2"></div>
+              <div class="tel-val" id="tval2">0</div>
+            </div>
+            <div class="tel-bar" title="A3">
+              <div class="tel-fill" id="tel3"></div>
+              <div class="tel-val" id="tval3">0</div>
+            </div>
+            <div class="tel-bar" title="A4">
+              <div class="tel-fill" id="tel4"></div>
+              <div class="tel-val" id="tval4">0</div>
+            </div>
+          </div>
+          <div id="vel-hud">vL: 0 | vR: 0</div>
+        </div>
+      </div>
+      <div id="console">
+        <div class="c-sys">// RoboSim v1.0 — Runtime Arduino JS</div>
+        <div class="c-sys">// Motores: IN1=5 IN2=6 (izq) | IN3=9 IN4=10 (der)</div>
+        <div class="c-sys" id="consoleSensorInfo">// Sensores: A0..A4 → 0=línea / 1023=blanco</div>
+        <div class="c-sys">// Listo. Presioná ▶ Ejecutar</div>
+      </div>
+    </div>
+
+    <div id="right">
+      <div id="editor-header">
+        <span>sketch.ino</span>
+        <span style="color:var(--text2);font-size:10px">Arduino C++ → JS transpiler</span>
+      </div>
+      <textarea id="editor" spellcheck="false">// Velocista seguidor de linea - 5 sensores IR
+// analogRead: 0 = linea negra, 1023 = pista clara
+// Sensores activos: A0, A1, A2, A3, A4
+// Motores con reversa: pin A adelante, pin B atras
+// Ejemplo base: sigue la linea sin busqueda de rescate.
+// Si se sale, avanza recto: el simulador no lo "salva" solo.
+
+#define MOTOR_IZQ_A 5
+#define MOTOR_IZQ_B 6
+#define MOTOR_DER_A 9
+#define MOTOR_DER_B 10
+
+#define SENSOR_COUNT 5
+#define VEL_RECTA  190
+#define VEL_CURVA  130
+#define KP         14
+#define KD         24
+
+// En Arduino Uno A6/A7 no existen como constantes, pero el ADC del simulador
+// acepta canales 6 y 7 para probar barras velocistas de hasta 8 sensores.
+#ifndef A6
+#define A6 20
+#endif
+#ifndef A7
+#define A7 21
+#endif
+
+const byte sensorPins[SENSOR_COUNT] = { A0, A1, A2, A3, A4 };
+const int sensorWeights[SENSOR_COUNT] = { -200, -100, 0, 100, 200 };
+
+int sensores[SENSOR_COUNT];
+int linea[SENSOR_COUNT];
+int error, errorFiltrado, ultimoError, derivada, correccion;
+int velIzq, velDer, base;
+
+void motorIzq(int vel) {
+  vel = constrain(vel, -255, 255);
+  if (vel >= 0) {
+    analogWrite(MOTOR_IZQ_A, vel);
+    analogWrite(MOTOR_IZQ_B, 0);
+  } else {
+    analogWrite(MOTOR_IZQ_A, 0);
+    analogWrite(MOTOR_IZQ_B, -vel);
+  }
+}
+
+void motorDer(int vel) {
+  vel = constrain(vel, -255, 255);
+  if (vel >= 0) {
+    analogWrite(MOTOR_DER_A, vel);
+    analogWrite(MOTOR_DER_B, 0);
+  } else {
+    analogWrite(MOTOR_DER_A, 0);
+    analogWrite(MOTOR_DER_B, -vel);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Velocista PID iniciado - 5 sensores");
+}
+
+void loop() {
+  long suma = 0;
+  long ponderado = 0;
+
+  for (byte i = 0; i < SENSOR_COUNT; i++) {
+    sensores[i] = analogRead(sensorPins[i]);
+    linea[i] = 1023 - sensores[i];
+    if (linea[i] < 55) linea[i] = 0;
+    suma += linea[i];
+    ponderado += (long)linea[i] * sensorWeights[i];
+  }
+
+  if (suma < 80) {
+    // Sin rescate: si perdio la linea, sigue recto.
+    // Esto deja ver cuando el PID no alcanza para sostener la curva.
+    motorIzq(VEL_CURVA);
+    motorDer(VEL_CURVA);
+    delay(4);
+    return;
+  }
+
+  // Error ponderado: negativo = linea a la izquierda, positivo = derecha.
+  error = ponderado / suma;
+  errorFiltrado = (errorFiltrado * 3 + error) / 4;
+  if (abs(errorFiltrado) < 8) errorFiltrado = 0;
+
+  derivada = errorFiltrado - ultimoError;
+  ultimoError = errorFiltrado;
+
+  base = VEL_RECTA - min(abs(errorFiltrado), 170) * 2 / 7;
+  if (base < VEL_CURVA) base = VEL_CURVA;
+
+  correccion = (KP * errorFiltrado + KD * derivada) / 10;
+
+  velIzq = constrain(base + correccion, -90, 255);
+  velDer = constrain(base - correccion, -90, 255);
+
+  motorIzq(velIzq);
+  motorDer(velDer);
+
+  delay(4);
+}</textarea>
+      <div id="pinmap">
+        <div class="pm-title">Mapa de pines</div>
+        <div class="pm-grid">
+          <div>
+            <div class="pm-row"><span class="pm-key">Motor Izq +</span><span class="pm-val">MOTOR_IZQ_A = 5</span></div>
+            <div class="pm-row"><span class="pm-key">Motor Izq −</span><span class="pm-val">MOTOR_IZQ_B = 6</span></div>
+            <div class="pm-row"><span class="pm-key">Motor Der +</span><span class="pm-val">MOTOR_DER_A = 9</span></div>
+            <div class="pm-row"><span class="pm-key">Motor Der −</span><span class="pm-val">MOTOR_DER_B = 10</span>
+            </div>
+          </div>
+          <div id="sensorPinRows"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal-backdrop hidden" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="settingsTitle">&#128295; Ajustes del velocista</h2>
+          <p>Configur&aacute; la trompa del robot: cantidad de sensores IR, separaci&oacute;n f&iacute;sica y pines
+            anal&oacute;gicos del sketch.</p>
+        </div>
+        <button class="modal-close" id="settingsClose" aria-label="Cerrar ajustes">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-panel">
+          <div class="setting-block">
+            <div class="setting-label">
+              <span>Cantidad de sensores</span>
+              <span class="setting-value" id="sensorCountLabel">5</span>
+            </div>
+            <div class="setting-inputs">
+              <input type="range" min="2" max="8" step="1" value="5" id="sensorCountRange">
+              <input type="number" min="2" max="8" step="1" value="5" id="sensorCountNumber">
+            </div>
+          </div>
+          <div class="setting-block">
+            <div class="setting-label">
+              <span>Separaci&oacute;n entre sensores</span>
+              <span class="setting-value" id="sensorSepLabel">60 mm</span>
+            </div>
+            <div class="setting-inputs">
+              <input type="range" min="20" max="120" step="5" value="60" id="sensorSepRange">
+              <input type="number" min="20" max="120" step="5" value="60" id="sensorSepNumber">
+            </div>
+          </div>
+          <p class="settings-note">
+            Al cambiar la cantidad se regenera el sketch con entradas anal&oacute;gicas consecutivas.
+            Si la simulaci&oacute;n est&aacute; corriendo, deten&eacute; y ejecut&aacute; de nuevo para compilar el
+            nuevo c&oacute;digo.
+          </p>
+        </div>
+        <div class="nose-preview">
+          <div class="nose-title">
+            <strong>Trompa / sensores IR</strong>
+            <span id="sensorSpanLabel">A0..A4</span>
+          </div>
+          <div class="nose-canvas" id="nosePreview">
+            <div class="nose-body"></div>
+            <div class="nose-arrow"></div>
+            <div class="nose-bar"></div>
+            <div class="preview-ruler" id="sensorRuler">60 mm entre sensores</div>
+          </div>
+          <div class="settings-pins" id="settingsPins"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn run" id="settingsDone">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script type="module">
+    import * as CANNON from 'https://esm.sh/cannon-es@0.20.0';
+    import {
+      CPU, avrInstruction, AVRTimer, AVRIOPort, AVRUSART,
+      timer0Config, timer1Config, timer2Config,
+      portBConfig, portCConfig, portDConfig, usart0Config
+    } from 'https://esm.sh/avr8js@0.21.0';
+
+    // ─── CONSOLE ──────────────────────────────────────────────
+    const cons = document.getElementById('console');
+    function log(msg, cls = '') {
+      const d = document.createElement('div');
+      if (cls) d.className = cls;
+      d.textContent = msg;
+      cons.appendChild(d);
+      cons.scrollTop = cons.scrollHeight;
+      if (cons.children.length > 300) cons.removeChild(cons.children[0]);
+    }
+
+    let editorCM = null;
+
+    const SENSOR_MIN_COUNT = 2;
+    const SENSOR_MAX_COUNT = 8;
+    const SENSOR_MIN_SEP_MM = 20;
+    const SENSOR_MAX_SEP_MM = 120;
+    const SENSOR_DEFAULT_COUNT = 5;
+    const SENSOR_DEFAULT_SEP_MM = 60;
+    const SENSOR_MM_PER_UNIT = 1000;
+    let sensorCount = SENSOR_DEFAULT_COUNT;
+    let sensorSepMm = SENSOR_DEFAULT_SEP_MM;
+    let SENSOR_Z = computeSensorZPositions(sensorCount, sensorSepMm);
+
+    function clampNumber(value, min, max) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return min;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function clampInt(value, min, max) {
+      return Math.round(clampNumber(value, min, max));
+    }
+
+    function computeSensorZPositions(count, sepMm) {
+      const c = clampInt(count, SENSOR_MIN_COUNT, SENSOR_MAX_COUNT);
+      const sep = clampNumber(sepMm, SENSOR_MIN_SEP_MM, SENSOR_MAX_SEP_MM) / SENSOR_MM_PER_UNIT;
+      const center = (c - 1) * 0.5;
+      return Array.from({ length: c }, (_, i) => (i - center) * sep);
+    }
+
+    function getSensorBarWidth() {
+      return Math.max(0.12, ((sensorCount - 1) * sensorSepMm / SENSOR_MM_PER_UNIT) + 0.04);
+    }
+
+    function sensorPinsLabel(count = sensorCount) {
+      return `A0..A${count - 1}`;
+    }
+
+    function sensorSemanticLabel(index, count = sensorCount) {
+      const mid = (count - 1) / 2;
+      if (index === 0) return 'izq ext';
+      if (index === count - 1) return 'der ext';
+      if (index === mid) return 'centro';
+      return index < mid ? 'izq' : 'der';
+    }
+
+    function generateSensorWeights(count) {
+      if (count <= 1) return [0];
+      return Array.from({ length: count }, (_, i) => Math.round(-200 + (400 * i) / (count - 1)));
+    }
+
+    function generateArduinoSketch(count = sensorCount) {
+      const c = clampInt(count, SENSOR_MIN_COUNT, SENSOR_MAX_COUNT);
+      const pins = Array.from({ length: c }, (_, i) => `A${i}`);
+      const weights = generateSensorWeights(c);
+      return `// Velocista seguidor de linea - ${c} sensores IR
+// analogRead: 0 = linea negra, 1023 = pista clara
+// Sensores activos: ${pins.join(', ')}
+// Motores con reversa: pin A adelante, pin B atras
+// Ejemplo base: sigue la linea sin busqueda de rescate.
+// Si se sale, avanza recto: el simulador no lo "salva" solo.
+
+#define MOTOR_IZQ_A 5
+#define MOTOR_IZQ_B 6
+#define MOTOR_DER_A 9
+#define MOTOR_DER_B 10
+
+#define SENSOR_COUNT ${c}
+#define VEL_RECTA  190
+#define VEL_CURVA  130
+#define KP         14
+#define KD         24
+
+// En Arduino Uno A6/A7 no existen como constantes, pero el ADC del simulador
+// acepta canales 6 y 7 para probar barras velocistas de hasta 8 sensores.
+#ifndef A6
+#define A6 20
+#endif
+#ifndef A7
+#define A7 21
+#endif
+
+const byte sensorPins[SENSOR_COUNT] = { ${pins.join(', ')} };
+const int sensorWeights[SENSOR_COUNT] = { ${weights.join(', ')} };
+
+int sensores[SENSOR_COUNT];
+int linea[SENSOR_COUNT];
+int error, errorFiltrado, ultimoError, derivada, correccion;
+int velIzq, velDer, base;
+
+void motorIzq(int vel) {
+  vel = constrain(vel, -255, 255);
+  if (vel >= 0) {
+    analogWrite(MOTOR_IZQ_A, vel);
+    analogWrite(MOTOR_IZQ_B, 0);
+  } else {
+    analogWrite(MOTOR_IZQ_A, 0);
+    analogWrite(MOTOR_IZQ_B, -vel);
+  }
+}
+
+void motorDer(int vel) {
+  vel = constrain(vel, -255, 255);
+  if (vel >= 0) {
+    analogWrite(MOTOR_DER_A, vel);
+    analogWrite(MOTOR_DER_B, 0);
+  } else {
+    analogWrite(MOTOR_DER_A, 0);
+    analogWrite(MOTOR_DER_B, -vel);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Velocista PID iniciado - ${c} sensores");
+}
+
+void loop() {
+  long suma = 0;
+  long ponderado = 0;
+
+  for (byte i = 0; i < SENSOR_COUNT; i++) {
+    sensores[i] = analogRead(sensorPins[i]);
+    linea[i] = 1023 - sensores[i];
+    if (linea[i] < 55) linea[i] = 0;
+    suma += linea[i];
+    ponderado += (long)linea[i] * sensorWeights[i];
+  }
+
+  if (suma < 80) {
+    // Sin rescate: si perdio la linea, sigue recto.
+    // Esto deja ver cuando el PID no alcanza para sostener la curva.
+    motorIzq(VEL_CURVA);
+    motorDer(VEL_CURVA);
+    delay(4);
+    return;
+  }
+
+  // Error ponderado: negativo = linea a la izquierda, positivo = derecha.
+  error = ponderado / suma;
+  errorFiltrado = (errorFiltrado * 3 + error) / 4;
+  if (abs(errorFiltrado) < 8) errorFiltrado = 0;
+
+  derivada = errorFiltrado - ultimoError;
+  ultimoError = errorFiltrado;
+
+  base = VEL_RECTA - min(abs(errorFiltrado), 170) * 2 / 7;
+  if (base < VEL_CURVA) base = VEL_CURVA;
+
+  correccion = (KP * errorFiltrado + KD * derivada) / 10;
+
+  velIzq = constrain(base + correccion, -90, 255);
+  velDer = constrain(base - correccion, -90, 255);
+
+  motorIzq(velIzq);
+  motorDer(velDer);
+
+  delay(4);
+}`;
+    }
+
+    function setEditorSketch(src) {
+      if (editorCM) editorCM.setValue(src);
+      else document.getElementById('editor').value = src;
+    }
+
+    function updateArduinoSketchForSensors() {
+      setEditorSketch(generateArduinoSketch(sensorCount));
+    }
+
+    // ─── THREE.JS ─────────────────────────────────────────────
+    const canvas = document.getElementById('simCanvas');
+    const wrap = document.getElementById('canvas-wrap');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111827);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+
+    let camMode = 'libre';
+    const perspCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    perspCamera.position.set(0, 2, 2);
+
+    const orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+    orthoCamera.position.set(0, 10, 0);
+    orthoCamera.lookAt(0, 0, 0);
+
+    let activeCamera = perspCamera;
+    let controls;
+
+    if (typeof THREE.OrbitControls !== 'undefined') {
+      controls = new THREE.OrbitControls(perspCamera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2 - 0.05;
+    }
+
+    function resize() {
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      perspCamera.aspect = w / h;
+      perspCamera.updateProjectionMatrix();
+
+      const asp = w / h, vs = 3.8;
+      orthoCamera.left = -vs * asp; orthoCamera.right = vs * asp;
+      orthoCamera.top = vs; orthoCamera.bottom = -vs;
+      orthoCamera.updateProjectionMatrix();
+
+      renderer.setSize(w, h);
+    }
+    resize();
+    new ResizeObserver(resize).observe(wrap);
+
+    // ─── TRACKS ───────────────────────────────────────────────
+    const TRACKS = {
+      oval() {
+        const pts = [];
+        for (let i = 0; i <= 120; i++) {
+          const t = i / 120 * Math.PI * 2;
+          pts.push(new THREE.Vector2(Math.cos(t) * 2.4, Math.sin(t) * 1.5));
+        }
+        return pts;
+      },
+      figure8() {
+        const pts = [];
+        for (let i = 0; i <= 240; i++) {
+          const t = i / 240 * Math.PI * 2;
+          pts.push(new THREE.Vector2(Math.sin(t) * 2.1, Math.sin(t) * Math.cos(t) * 1.6));
+        }
+        return pts;
+      },
+      zigzag() {
+        // Un circuito con rectas perimetrales y un zig-zag en la parte superior
+        const wps = [
+          [-2.0, -1.2], // 0. Inicio (Abajo Izquierda)
+          [2.0, -1.2], // 1. Recta inferior (Abajo Derecha)
+          [2.0, 1.2], // 2. Recta derecha (Arriba Derecha)
+          [0.8, 1.2], // 3. Acercarse al centro
+          [0.4, 0.0], // 4. Zig (Baja)
+          [0.0, 1.2], // 5. Zag (Sube)
+          [-0.4, 0.0], // 6. Zig (Baja)
+          [-0.8, 1.2], // 7. Zag (Sube)
+          [-2.0, 1.2], // 8. Terminar zig-zag (Arriba Izquierda)
+          [-2.0, -1.2]  // 9. Volver al inicio
+        ];
+        const pts = [];
+        for (let i = 0; i < wps.length - 1; i++) {
+          const [x0, y0] = wps[i], [x1, y1] = wps[i + 1];
+          for (let s = 0; s < 40; s++) {
+            const k = s / 40;
+            pts.push(new THREE.Vector2(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k));
+          }
+        }
+        pts.push(new THREE.Vector2(wps[0][0], wps[0][1]));
+        return pts;
+      }
+    };
+
+    // ─── CUSTOM TRACK LOADER ──────────────────────────────────
+    let customImgCanvas = document.createElement('canvas');
+    let customImgCtx = customImgCanvas.getContext('2d', { willReadFrequently: true });
+    let customImageData = null;
+    let customImageTex = null;
+    let customPlaneWidth = 10;
+    let customPlaneHeight = 8;
+
+    let trackGroup = new THREE.Group();
+    scene.add(trackGroup);
+    let trackCurve = null;
+    let generatedTrackTexture = null;
+const TRACK_WHITE_WIDTH = 0.16; // 160 mm aprox. de zona clara alrededor de la cinta.
+const TRACK_BLACK_WIDTH = 0.055; // 55 mm: más cerca de una cinta real que de una "calle".
+const SENSOR_BLACK_CORE = 0.020; // Zona donde el sensor ve negro pleno.
+const SENSOR_BLACK_EDGE = 0.034; // Borde óptico: a partir de acá ve blanco.
+const SENSOR_BASE_NOISE = 10; // Ruido eléctrico/superficie, en cuentas ADC.
+const SENSOR_EDGE_NOISE = 34; // El borde de la cinta nunca es una lectura perfecta.
+
+    function disposeGeneratedTrackTexture() {
+      if (generatedTrackTexture) {
+        generatedTrackTexture.dispose();
+        generatedTrackTexture = null;
+      }
+    }
+
+    function makeRibbonMesh(pts2d, width, color, y, renderOrder = 0) {
+      if (!pts2d || pts2d.length < 2) return null;
+
+      const closed = Math.hypot(
+        pts2d[0].x - pts2d[pts2d.length - 1].x,
+        pts2d[0].y - pts2d[pts2d.length - 1].y
+      ) < 0.025;
+      const pts = closed ? pts2d.slice(0, -1) : pts2d.slice();
+      if (pts.length < 2) return null;
+
+      const half = width * 0.5;
+      const vertices = [];
+      const indices = [];
+
+      for (let i = 0; i < pts.length; i++) {
+        const prev = pts[closed ? (i - 1 + pts.length) % pts.length : Math.max(0, i - 1)];
+        const next = pts[closed ? (i + 1) % pts.length : Math.min(pts.length - 1, i + 1)];
+        let dx = next.x - prev.x;
+        let dz = next.y - prev.y;
+        let len = Math.hypot(dx, dz);
+        if (len < 0.0001) {
+          dx = 1;
+          dz = 0;
+          len = 1;
+        }
+        const nx = -dz / len;
+        const nz = dx / len;
+        const p = pts[i];
+        vertices.push(p.x + nx * half, y, p.y + nz * half);
+        vertices.push(p.x - nx * half, y, p.y - nz * half);
+      }
+
+      const segmentCount = closed ? pts.length : pts.length - 1;
+      for (let i = 0; i < segmentCount; i++) {
+        const j = (i + 1) % pts.length;
+        const a = i * 2;
+        const b = j * 2;
+        indices.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+
+      const mat = new THREE.MeshBasicMaterial({
+        color,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -renderOrder,
+        polygonOffsetUnits: -renderOrder
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.renderOrder = renderOrder;
+      trackGroup.add(mesh);
+      return mesh;
+    }
+
+    function makeGeneratedTrackPlane(pts2d) {
+      const planeW = 10;
+      const planeH = 8;
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(planeW, planeH),
+        new THREE.MeshBasicMaterial({ color: 0xe8e4d8 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.001;
+      floor.renderOrder = 0;
+      trackGroup.add(floor);
+
+      // La pista generada es geometria vectorial: evita pixelado al hacer zoom
+      // y no vuelve al sistema viejo de muchos segmentos con cortes/coplanaridad.
+      makeRibbonMesh(pts2d, TRACK_WHITE_WIDTH, 0xffffff, 0.004, 1);
+      makeRibbonMesh(pts2d, TRACK_BLACK_WIDTH, 0x111111, 0.008, 2);
+
+      return floor;
+    }
+
+    function buildTrack(type) {
+      while (trackGroup.children.length) trackGroup.remove(trackGroup.children[0]);
+      disposeGeneratedTrackTexture();
+
+      if (type === 'custom' && customImageTex) {
+        trackCurve = null;
+        const floor = new THREE.Mesh(
+          new THREE.PlaneGeometry(customPlaneWidth, customPlaneHeight),
+          new THREE.MeshBasicMaterial({ map: customImageTex })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        trackGroup.add(floor);
+        return;
+      }
+
+      customImageData = null;
+      const pts2d = TRACKS[type]();
+      const curve = new THREE.SplineCurve(pts2d);
+      trackCurve = curve;
+      const pts2dForTexture = curve.getPoints(1800);
+      makeGeneratedTrackPlane(pts2dForTexture);
+
+      // Start marker
+      const sp = curve.getPoint(0);
+      const startGeo = new THREE.PlaneGeometry(0.12, 0.42);
+      const startMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+      const startMesh = new THREE.Mesh(startGeo, startMat);
+      startMesh.rotation.x = -Math.PI / 2;
+      startMesh.position.set(sp.x, 0.015, sp.y);
+      trackGroup.add(startMesh);
+    }
+
+    // ─── ROBOT MESH & PHYSICS SETUP ───────────────────────────
+    const SENSOR_FWD = 0.20; // Distancia del sensor al eje
+    const WHEEL_X = -0.06; // Posición de las ruedas respecto al centro del chasis
+    const RACER_BODY_Y = 0.05;
+    const RACER_WHEEL_Y = 0.02;
+    const RACER_WHEEL_Z = 0.115;
+    const RACER_WHEEL_RADIUS = 0.055;
+const RACER_MAX_LINEAR_SPEED = 2.15; // unidades de pista/s a PWM 255: velocista, no carrito lento.
+const RACER_WHEEL_BASE = RACER_WHEEL_Z * 2;
+const RACER_PWM_DEADBAND = 16;
+const RACER_LEFT_GAIN = 0.985;
+const RACER_RIGHT_GAIN = 1.015;
+const RACER_ACCEL_RATE = 18;
+const RACER_BRAKE_RATE = 34;
+const RACER_YAW_GAIN = 0.82;
+const RACER_SPEED_UNDERSTEER = 1.2;
+const RACER_SLIP_GAIN = 0.045;
+const RACER_PID_VIBRATION_GAIN = 0.022;
+const RACER_PID_OSC_RISE = 26;
+const RACER_PID_OSC_FALL = 5.2;
+const RACER_COAST_DRAG = 3.2;
+    const robotGroup = new THREE.Group(); // Legacy reference for cameras
+    const chassisMesh = new THREE.Group();
+    scene.add(chassisMesh);
+
+    // 1. Placa del chasis principal (Gris)
+    const bodyMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.008, 0.15),
+      new THREE.MeshBasicMaterial({ color: 0x5a5d64 })
+    );
+    bodyMesh.position.set(0.01, 0.025, 0);
+    chassisMesh.add(bodyMesh);
+
+    // 2. Placa de circuito impreso (PCB Verde)
+    const pcb = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.005, 0.10),
+      new THREE.MeshBasicMaterial({ color: 0x0f6e56 })
+    );
+    pcb.position.set(0.01, 0.031, 0);
+    chassisMesh.add(pcb);
+
+    // Detalles sobre la PCB:
+    // Microcontrolador Arduino Nano (Azul)
+    const microcontroller = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.006, 0.03),
+      new THREE.MeshBasicMaterial({ color: 0x1976d2 })
+    );
+    microcontroller.position.set(0.01, 0.037, 0);
+    chassisMesh.add(microcontroller);
+
+    // Driver de motores (Naranja, tipo A4988)
+    const motorDriver = new THREE.Mesh(
+      new THREE.BoxGeometry(0.025, 0.005, 0.025),
+      new THREE.MeshBasicMaterial({ color: 0xff5722 })
+    );
+    motorDriver.position.set(-0.02, 0.036, -0.025);
+    chassisMesh.add(motorDriver);
+
+    // Conectores y otros componentes negros
+    const conn1 = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.008, 0.015), new THREE.MeshBasicMaterial({ color: 0x21262d }));
+    conn1.position.set(-0.03, 0.037, 0.03);
+    chassisMesh.add(conn1);
+
+    const conn2 = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.008, 0.015), new THREE.MeshBasicMaterial({ color: 0x21262d }));
+    conn2.position.set(0.04, 0.037, 0.03);
+    chassisMesh.add(conn2);
+
+    // 3. Motores Amarillos a los costados
+    const leftMotor = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, 0.035), new THREE.MeshBasicMaterial({ color: 0xfdd835 }));
+    leftMotor.position.set(WHEEL_X + 0.01, 0.03, -0.075);
+    chassisMesh.add(leftMotor);
+
+    const leftMotorBack = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.02, 8), new THREE.MeshBasicMaterial({ color: 0xbcbcbc }));
+    leftMotorBack.rotation.z = Math.PI / 2;
+    leftMotorBack.position.set(WHEEL_X - 0.022, 0.03, -0.075);
+    chassisMesh.add(leftMotorBack);
+
+    const rightMotor = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, 0.035), new THREE.MeshBasicMaterial({ color: 0xfdd835 }));
+    rightMotor.position.set(WHEEL_X + 0.01, 0.03, 0.075);
+    chassisMesh.add(rightMotor);
+
+    const rightMotorBack = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.02, 8), new THREE.MeshBasicMaterial({ color: 0xbcbcbc }));
+    rightMotorBack.rotation.z = Math.PI / 2;
+    rightMotorBack.position.set(WHEEL_X - 0.022, 0.03, 0.075);
+    chassisMesh.add(rightMotorBack);
+
+    // 4. Brazos extensores metálicos de soporte (hacia adelante)
+    const leftBar = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.006, 0.01), new THREE.MeshBasicMaterial({ color: 0x757575 }));
+    leftBar.position.set(0.15, 0.025, -0.03);
+    chassisMesh.add(leftBar);
+
+    const rightBar = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.006, 0.01), new THREE.MeshBasicMaterial({ color: 0x757575 }));
+    rightBar.position.set(0.15, 0.025, 0.03);
+    chassisMesh.add(rightBar);
+
+    // 5. Regleta de sensores al frente (Negra/Gris)
+    const sbar = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.012, getSensorBarWidth()), new THREE.MeshBasicMaterial({ color: 0x21262d }));
+    sbar.position.set(SENSOR_FWD - 0.005, 0.02, 0);
+    chassisMesh.add(sbar);
+
+    // Flecha indicadora de dirección
+    const arrowMesh = new THREE.Mesh(new THREE.ConeGeometry(0.015, 0.04, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    arrowMesh.rotation.z = -Math.PI / 2;
+    arrowMesh.position.set(0.04, 0.045, 0);
+    chassisMesh.add(arrowMesh);
+
+    const sensorMeshes = [];
+    for (let i = 0; i < SENSOR_MAX_COUNT; i++) {
+      const sm = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff2200 }));
+      sm.position.set(SENSOR_FWD, 0.02, SENSOR_Z[i] ?? 0);
+      sm.visible = i < sensorCount;
+      chassisMesh.add(sm);
+      sensorMeshes.push(sm);
+    }
+
+    function renderSensorHud() {
+      const sensorsRow = document.getElementById('sensors-row');
+      const telemetryRow = document.getElementById('telemetry-row');
+      if (sensorsRow) {
+        sensorsRow.innerHTML = '<span class="s-label">IR:</span>';
+        for (let i = 0; i < sensorCount; i++) {
+          const led = document.createElement('div');
+          led.className = 'led off';
+          led.id = `led${i}`;
+          led.title = `A${i}-S${i} ${sensorSemanticLabel(i)}`;
+          sensorsRow.appendChild(led);
+        }
+      }
+
+      if (telemetryRow) {
+        telemetryRow.innerHTML = '';
+        for (let i = 0; i < sensorCount; i++) {
+          const bar = document.createElement('div');
+          bar.className = 'tel-bar';
+          bar.title = `A${i}`;
+          bar.innerHTML = `<div class="tel-fill" id="tel${i}"></div><div class="tel-val" id="tval${i}">1023</div>`;
+          telemetryRow.appendChild(bar);
+        }
+      }
+
+      const pinRows = document.getElementById('sensorPinRows');
+      if (pinRows) {
+        pinRows.innerHTML = '';
+        for (let i = 0; i < sensorCount; i++) {
+          const row = document.createElement('div');
+          row.className = 'pm-row';
+          row.innerHTML = `<span class="pm-key">S${i} ${sensorSemanticLabel(i)}</span><span class="pm-val">A${i}</span>`;
+          pinRows.appendChild(row);
+        }
+      }
+
+      const consoleInfo = document.getElementById('consoleSensorInfo');
+      if (consoleInfo) consoleInfo.textContent = `// Sensores: ${sensorPinsLabel()} → 0=línea / 1023=blanco`;
+    }
+
+    function renderNosePreview() {
+      const preview = document.getElementById('nosePreview');
+      if (!preview) return;
+      preview.querySelectorAll('.preview-sensor').forEach(el => el.remove());
+
+      const spanMm = (sensorCount - 1) * sensorSepMm;
+      const previewSpanPct = Math.min(78, Math.max(24, (spanMm / 420) * 78));
+      const center = (sensorCount - 1) * 0.5;
+      for (let i = 0; i < sensorCount; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'preview-sensor active';
+        dot.dataset.pin = `A${i}`;
+        const offset = sensorCount === 1 ? 0 : ((i - center) / (sensorCount - 1)) * previewSpanPct;
+        dot.style.left = `${50 + offset}%`;
+        preview.appendChild(dot);
+      }
+
+      const ruler = document.getElementById('sensorRuler');
+      if (ruler) ruler.textContent = `${sensorSepMm} mm entre sensores · ancho ${spanMm} mm`;
+    }
+
+    function updateSettingsUi() {
+      const pairs = [
+        ['sensorCountRange', sensorCount],
+        ['sensorCountNumber', sensorCount],
+        ['sensorSepRange', sensorSepMm],
+        ['sensorSepNumber', sensorSepMm],
+      ];
+      for (const [id, value] of pairs) {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+      }
+      const countLabel = document.getElementById('sensorCountLabel');
+      if (countLabel) countLabel.textContent = String(sensorCount);
+      const sepLabel = document.getElementById('sensorSepLabel');
+      if (sepLabel) sepLabel.textContent = `${sensorSepMm} mm`;
+      const spanLabel = document.getElementById('sensorSpanLabel');
+      if (spanLabel) spanLabel.textContent = sensorPinsLabel();
+      const settingsPins = document.getElementById('settingsPins');
+      if (settingsPins) {
+        const pins = Array.from({ length: sensorCount }, (_, i) => `<code>A${i}</code>`).join(' ');
+        settingsPins.innerHTML = `Pines activos: ${pins}<br>El sketch se regenera con <code>SENSOR_COUNT ${sensorCount}</code>.`;
+      }
+      renderNosePreview();
+    }
+
+    function applySensorSettings(nextCount = sensorCount, nextSepMm = sensorSepMm, opts = {}) {
+      sensorCount = clampInt(nextCount, SENSOR_MIN_COUNT, SENSOR_MAX_COUNT);
+      sensorSepMm = clampInt(nextSepMm, SENSOR_MIN_SEP_MM, SENSOR_MAX_SEP_MM);
+      SENSOR_Z = computeSensorZPositions(sensorCount, sensorSepMm);
+
+      for (let i = 0; i < SENSOR_MAX_COUNT; i++) {
+        const active = i < sensorCount;
+        sensorMeshes[i].visible = active;
+        sensorMeshes[i].position.set(SENSOR_FWD, 0.02, active ? SENSOR_Z[i] : 0);
+        sensorMeshes[i].material.color.setHex(active ? 0xff2200 : 0x333333);
+      }
+
+      sbar.geometry.dispose();
+      sbar.geometry = new THREE.BoxGeometry(0.02, 0.012, getSensorBarWidth());
+      renderSensorHud();
+      updateSettingsUi();
+      if (opts.updateSketch !== false) updateArduinoSketchForSensors();
+      if (opts.sample !== false) sampleSensors();
+      updateMesh();
+      renderer.render(scene, activeCamera);
+    }
+
+    function createWheelMesh() {
+      const g = new THREE.Group();
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 14), new THREE.MeshBasicMaterial({ color: 0x1a1a1a }));
+      w.rotation.x = Math.PI / 2;
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.015, 14, 1, true), new THREE.MeshBasicMaterial({ color: 0x444444 }));
+      ring.rotation.x = Math.PI / 2;
+      g.add(w); g.add(ring);
+      return g;
+    }
+    const leftWheelMesh = createWheelMesh();
+    const rightWheelMesh = createWheelMesh();
+    scene.add(leftWheelMesh);
+    scene.add(rightWheelMesh);
+
+    // Physics World
+    const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
+    const defMat = new CANNON.Material('def');
+    world.addContactMaterial(new CANNON.ContactMaterial(defMat, defMat, { friction: 0.8, restitution: 0.0 }));
+
+    const floorBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane(), material: defMat });
+    floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    world.addBody(floorBody);
+
+    const chassisBody = new CANNON.Body({ mass: 1, material: defMat });
+    chassisBody.addShape(new CANNON.Box(new CANNON.Vec3(0.14, 0.035, 0.10)), new CANNON.Vec3(0, 0.035, 0));
+    const casMat = new CANNON.Material('cas');
+    world.addContactMaterial(new CANNON.ContactMaterial(defMat, casMat, { friction: 0.0, restitution: 0.0 }));
+    chassisBody.addShape(new CANNON.Sphere(0.015), new CANNON.Vec3(0.12, 0.015, 0));
+    chassisBody.addShape(new CANNON.Sphere(0.015), new CANNON.Vec3(-0.12, 0.015, 0));
+    world.addBody(chassisBody);
+
+    const wShape = new CANNON.Sphere(0.055);
+    const wQ = new CANNON.Quaternion(); // Identity quaternion
+    const leftWheelBody = new CANNON.Body({ mass: 0.2, material: defMat });
+    leftWheelBody.addShape(wShape, new CANNON.Vec3(), wQ);
+    world.addBody(leftWheelBody);
+
+    const rightWheelBody = new CANNON.Body({ mass: 0.2, material: defMat });
+    rightWheelBody.addShape(wShape, new CANNON.Vec3(), wQ);
+    world.addBody(rightWheelBody);
+
+    const leftHinge = new CANNON.HingeConstraint(chassisBody, leftWheelBody, {
+      pivotA: new CANNON.Vec3(WHEEL_X, 0.02, -0.115), axisA: new CANNON.Vec3(0, 0, 1),
+      pivotB: new CANNON.Vec3(0, 0, 0), axisB: new CANNON.Vec3(0, 0, 1)
+    });
+    world.addConstraint(leftHinge);
+    leftHinge.enableMotor();
+
+    const rightHinge = new CANNON.HingeConstraint(chassisBody, rightWheelBody, {
+      pivotA: new CANNON.Vec3(WHEEL_X, 0.02, 0.115), axisA: new CANNON.Vec3(0, 0, 1),
+      pivotB: new CANNON.Vec3(0, 0, 0), axisB: new CANNON.Vec3(0, 0, 1)
+    });
+    world.addConstraint(rightHinge);
+    rightHinge.enableMotor();
+
+
+    // ─── SIM STATE ────────────────────────────────────────────
+const state = {
+  x: 0, z: 0, angle: 0,
+  vLeft: 0, vRight: 0,
+  actualVL: 0, actualVR: 0,
+  wheelSpinLeft: 0, wheelSpinRight: 0,
+  simTime: 0,
+  lastTargetVL: 0, lastTargetVR: 0,
+  pidOscillation: 0,
+  visualJitterX: 0, visualJitterY: 0, visualJitterZ: 0, visualJitterYaw: 0
+};
+const pinVals = {};
+let running = false;
+let simSpeed = 1;
+let animId = null;
+
+window.__robosimV2Debug = () => ({
+  running,
+  x: state.x,
+  z: state.z,
+  angle: state.angle,
+  vLeft: state.vLeft,
+  vRight: state.vRight,
+  actualVL: state.actualVL,
+  actualVR: state.actualVR,
+  pidOscillation: state.pidOscillation,
+  visualJitterYaw: state.visualJitterYaw,
+  sensorCount,
+  sensorSepMm,
+  sensors: Array.from({ length: sensorCount }, (_, i) => pinVals['A' + i] ?? 1023)
+});
+
+function approachValue(current, target, rate, dtSec) {
+  return current + (target - current) * (1 - Math.exp(-rate * dtSec));
+}
+
+function pwmToWheelSpeed(pwm, gain) {
+  const clamped = Math.max(-255, Math.min(255, Number(pwm) || 0));
+  const sign = Math.sign(clamped);
+  const mag = Math.abs(clamped);
+  if(mag <= RACER_PWM_DEADBAND) return 0;
+  const usable = (mag - RACER_PWM_DEADBAND) / (255 - RACER_PWM_DEADBAND);
+  return sign * Math.pow(usable, 1.08) * RACER_MAX_LINEAR_SPEED * gain;
+}
+
+    function setChassisPose(x, z, angle) {
+      state.x = x;
+      state.z = z;
+      state.angle = Math.atan2(Math.sin(angle), Math.cos(angle));
+      chassisBody.position.set(state.x, RACER_BODY_Y, state.z);
+      chassisBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), -state.angle);
+      chassisBody.velocity.set(0, 0, 0);
+      chassisBody.angularVelocity.set(0, 0, 0);
+      snapWheelBodiesToChassis();
+    }
+
+    function snapWheelBodiesToChassis() {
+      leftWheelBody.position.copy(chassisBody.pointToWorldFrame(new CANNON.Vec3(WHEEL_X, RACER_WHEEL_Y, -RACER_WHEEL_Z)));
+      rightWheelBody.position.copy(chassisBody.pointToWorldFrame(new CANNON.Vec3(WHEEL_X, RACER_WHEEL_Y, RACER_WHEEL_Z)));
+      leftWheelBody.velocity.set(0, 0, 0);
+      rightWheelBody.velocity.set(0, 0, 0);
+      leftWheelBody.angularVelocity.set(0, 0, 0);
+      rightWheelBody.angularVelocity.set(0, 0, 0);
+    }
+
+    function getWheelWorldQuaternion(spinRad) {
+      const base = new THREE.Quaternion(chassisBody.quaternion.x, chassisBody.quaternion.y, chassisBody.quaternion.z, chassisBody.quaternion.w);
+      const spin = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), spinRad);
+      return base.multiply(spin);
+    }
+
+    function racerPhysicsStep(dtMs) {
+      const dtSec = Math.max(0, Math.min(Number(dtMs) || 0, 50)) / 1000;
+      if (dtSec <= 0) return;
+      state.simTime += dtSec;
+
+      let targetVL = pwmToWheelSpeed(state.vLeft, RACER_LEFT_GAIN);
+      let targetVR = pwmToWheelSpeed(state.vRight, RACER_RIGHT_GAIN);
+      const prevDiffTarget = state.lastTargetVR - state.lastTargetVL;
+      const diffTarget = targetVR - targetVL;
+      const diffIntensity = Math.min(1, Math.abs(diffTarget) / (RACER_MAX_LINEAR_SPEED * 0.95));
+      const diffStep = Math.abs(diffTarget - prevDiffTarget);
+      const diffJerk = Math.min(
+        1,
+        Math.max(0, diffStep - RACER_MAX_LINEAR_SPEED * 0.018) / (RACER_MAX_LINEAR_SPEED * 0.34)
+      );
+      const signFlip = diffTarget * prevDiffTarget < -0.003;
+      const pwmDelta = Math.abs(state.vRight - state.vLeft) / 510;
+      const pwmSaturation = (Math.max(Math.abs(state.vLeft), Math.abs(state.vRight)) > 245 && pwmDelta > 0.30) ? 0.18 : 0;
+      const targetOscillation = signFlip
+        ? Math.min(1, 0.42 + diffJerk * 1.05 + diffIntensity * 0.12 + pwmSaturation)
+        : Math.min(1, pwmSaturation + diffIntensity * 0.035 + diffJerk * 0.34);
+      const oscRate = targetOscillation > state.pidOscillation ? RACER_PID_OSC_RISE : RACER_PID_OSC_FALL;
+      state.pidOscillation = approachValue(state.pidOscillation, targetOscillation, oscRate, dtSec);
+      const speedDemand = Math.min(1, (Math.abs(targetVL) + Math.abs(targetVR)) / (RACER_MAX_LINEAR_SPEED * 2));
+      const oscillationShake = Math.pow(Math.max(0, state.pidOscillation - 0.12) / 0.88, 2.0);
+      const ripple = RACER_PID_VIBRATION_GAIN * (0.03 + oscillationShake * 2.60) * speedDemand;
+      targetVL *= 1 + Math.sin(state.simTime * 86 + 0.7) * ripple + Math.sin(state.simTime * 151 + 2.1) * ripple * 0.35;
+      targetVR *= 1 + Math.sin(state.simTime * 91 + 2.8) * ripple + Math.sin(state.simTime * 143 + 0.3) * ripple * 0.35;
+      state.lastTargetVL = targetVL;
+      state.lastTargetVR = targetVR;
+
+      const rateL = Math.abs(targetVL) < Math.abs(state.actualVL) ? RACER_BRAKE_RATE : RACER_ACCEL_RATE;
+      const rateR = Math.abs(targetVR) < Math.abs(state.actualVR) ? RACER_BRAKE_RATE : RACER_ACCEL_RATE;
+      state.actualVL = approachValue(state.actualVL, targetVL, rateL, dtSec);
+      state.actualVR = approachValue(state.actualVR, targetVR, rateR, dtSec);
+
+      const forwardSpeed = (state.actualVL + state.actualVR) * 0.5;
+      const speedGrip = 1 / (1 + Math.abs(forwardSpeed) * RACER_SPEED_UNDERSTEER);
+      const idealOmega = ((state.actualVR - state.actualVL) / RACER_WHEEL_BASE) * RACER_YAW_GAIN;
+      const omega = idealOmega * speedGrip;
+      state.angle -= omega * dtSec;
+      state.angle = Math.atan2(Math.sin(state.angle), Math.cos(state.angle));
+      state.x += Math.cos(state.angle) * forwardSpeed * dtSec;
+      state.z += Math.sin(state.angle) * forwardSpeed * dtSec;
+      const lateralSlip = (idealOmega - omega) * forwardSpeed * RACER_SLIP_GAIN * dtSec;
+      state.x += -Math.sin(state.angle) * lateralSlip;
+      state.z += Math.cos(state.angle) * lateralSlip;
+
+      if (Math.abs(state.vLeft) < 1 && Math.abs(state.vRight) < 1) {
+        const drag = Math.exp(-RACER_COAST_DRAG * dtSec);
+        state.actualVL *= drag;
+        state.actualVR *= drag;
+      }
+
+      const visualShake = Math.min(1.2, speedDemand * (0.012 + oscillationShake * 3.00));
+      state.visualJitterYaw = Math.sin(state.simTime * 95) * 0.030 * visualShake;
+      state.visualJitterX = Math.sin(state.simTime * 123 + 0.4) * 0.011 * visualShake;
+      state.visualJitterY = Math.abs(Math.sin(state.simTime * 118 + 1.2)) * 0.008 * visualShake;
+      state.visualJitterZ = Math.sin(state.simTime * 137 + 1.8) * 0.011 * visualShake;
+
+      state.wheelSpinLeft = (state.wheelSpinLeft - (state.actualVL / RACER_WHEEL_RADIUS) * dtSec) % (Math.PI * 2);
+      state.wheelSpinRight = (state.wheelSpinRight - (state.actualVR / RACER_WHEEL_RADIUS) * dtSec) % (Math.PI * 2);
+      setChassisPose(state.x, state.z, state.angle);
+    }
+
+    function resetState() {
+      if (trackCurve) {
+        const p0 = trackCurve.getPoint(0);
+        const p1 = trackCurve.getPoint(0.015);
+        const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+        setChassisPose(p0.x, p0.y, angle);
+      } else {
+        setChassisPose(0, 0, 0);
+      }
+
+      state.vLeft = 0; state.vRight = 0; state.actualVL = 0; state.actualVR = 0;
+      state.wheelSpinLeft = 0; state.wheelSpinRight = 0;
+      state.simTime = 0; state.lastTargetVL = 0; state.lastTargetVR = 0;
+      state.pidOscillation = 0;
+      state.visualJitterX = 0; state.visualJitterY = 0; state.visualJitterZ = 0; state.visualJitterYaw = 0;
+      Object.keys(pinVals).forEach(k => delete pinVals[k]);
+      updateMesh();
+      renderSensorHud();
+      for (let i = 0; i < SENSOR_MAX_COUNT; i++) {
+        pinVals['A' + i] = 1023;
+        if (sensorMeshes[i]) sensorMeshes[i].material.color.setHex(i < sensorCount ? 0xff2200 : 0x333333);
+      }
+      for (let i = 0; i < sensorCount; i++) {
+        const led = document.getElementById('led' + i);
+        const tel = document.getElementById('tel' + i);
+        const tval = document.getElementById('tval' + i);
+        if (led) led.className = 'led off';
+        if (tel) tel.style.height = '0%';
+        if (tval) tval.textContent = '1023';
+      }
+      document.getElementById('vel-hud').textContent = 'vL: 0 | vR: 0';
+    }
+
+    function updateMesh() {
+      robotGroup.position.copy(chassisBody.position); // for camera
+      chassisMesh.position.copy(chassisBody.position);
+      chassisMesh.quaternion.copy(chassisBody.quaternion);
+      let jitterOffset = null;
+      let jitterQ = null;
+      if (state.visualJitterX || state.visualJitterY || state.visualJitterZ || state.visualJitterYaw) {
+        jitterOffset = new THREE.Vector3(state.visualJitterX, state.visualJitterY, state.visualJitterZ);
+        jitterOffset.applyQuaternion(chassisMesh.quaternion);
+        chassisMesh.position.add(jitterOffset);
+        jitterQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), state.visualJitterYaw);
+        chassisMesh.quaternion.multiply(jitterQ);
+      }
+      leftWheelMesh.position.copy(leftWheelBody.position);
+      leftWheelMesh.quaternion.copy(getWheelWorldQuaternion(state.wheelSpinLeft));
+      rightWheelMesh.position.copy(rightWheelBody.position);
+      rightWheelMesh.quaternion.copy(getWheelWorldQuaternion(state.wheelSpinRight));
+      if (jitterOffset && jitterQ) {
+        leftWheelMesh.position.add(jitterOffset);
+        leftWheelMesh.quaternion.multiply(jitterQ);
+        rightWheelMesh.position.add(jitterOffset);
+        rightWheelMesh.quaternion.multiply(jitterQ);
+      }
+      state.x = chassisBody.position.x;
+      state.z = chassisBody.position.z;
+
+      if (camMode === 'libre' && controls) {
+        const offset = perspCamera.position.clone().sub(controls.target);
+        controls.target.copy(robotGroup.position);
+        perspCamera.position.copy(controls.target).add(offset);
+        controls.update();
+      } else if (camMode === 'aerea') {
+        perspCamera.position.set(state.x, 4, state.z + 0.01);
+        perspCamera.lookAt(state.x, 0, state.z);
+      }
+    }
+
+    // ─── SENSOR SAMPLING ──────────────────────────────────────
+    function applySensorNoise(value, wx, wz) {
+      const edgeFactor = value > 30 && value < 990 ? 1 : 0;
+      const noiseAmp = SENSOR_BASE_NOISE + SENSOR_EDGE_NOISE * edgeFactor;
+      const n =
+        Math.sin(wx * 41.7 + wz * 73.1 + state.simTime * 29.0) * noiseAmp +
+        Math.sin(wx * 97.3 - wz * 31.9 + state.simTime * 61.0) * noiseAmp * 0.35;
+      return Math.max(0, Math.min(1023, Math.round(value + n)));
+    }
+
+    function getSensorValue(wx, wz) {
+      if (customImageData) {
+        const u = (wx + customPlaneWidth / 2) / customPlaneWidth;
+        const v = (wz + customPlaneHeight / 2) / customPlaneHeight;
+        if (u < 0 || u > 1 || v < 0 || v > 1) return 1023;
+        const px = Math.floor(u * customImageData.width);
+        const py = Math.floor(v * customImageData.height);
+        const idx = (py * customImageData.width + px) * 4;
+        const r = customImageData.data[idx];
+        const g = customImageData.data[idx + 1];
+        const b = customImageData.data[idx + 2];
+        const brightness = (r + g + b) / 3;
+        return applySensorNoise(Math.floor(brightness * 4.01), wx, wz);
+      }
+
+      if (!trackCurve) return 1023;
+      const samples = 320;
+      let minD = Infinity;
+      for (let i = 0; i < samples; i++) {
+        const p = trackCurve.getPoint(i / samples);
+        const dx = wx - p.x, dz = wz - p.y;
+        const d = dx * dx + dz * dz;
+        if (d < minD) minD = d;
+      }
+      const dist = Math.sqrt(minD);
+      if (dist < SENSOR_BLACK_EDGE) {
+        if (dist > SENSOR_BLACK_CORE) {
+          return applySensorNoise(Math.floor((dist - SENSOR_BLACK_CORE) / (SENSOR_BLACK_EDGE - SENSOR_BLACK_CORE) * 1023), wx, wz);
+        }
+        return applySensorNoise(0, wx, wz);
+      }
+      return applySensorNoise(1023, wx, wz);
+    }
+
+    function sampleSensors() {
+      const fwd = SENSOR_FWD;
+      for (let i = 0; i < SENSOR_MAX_COUNT; i++) {
+        pinVals['A' + i] = 1023;
+      }
+
+      for (let i = 0; i < sensorCount; i++) {
+        const zo = SENSOR_Z[i];
+        const localPos = new CANNON.Vec3(fwd, 0.02, zo);
+        const worldPos = chassisBody.pointToWorldFrame(localPos);
+
+        const val = getSensorValue(worldPos.x, worldPos.z);
+        pinVals['A' + i] = val;
+        const isBlack = val < 512;
+        sensorMeshes[i].material.color.setHex(isBlack ? 0x00ff88 : 0xff2200);
+        const led = document.getElementById('led' + i);
+        if (led) led.className = 'led ' + (isBlack ? 'on' : 'off');
+
+        const tel = document.getElementById('tel' + i);
+        const tval = document.getElementById('tval' + i);
+        if (tel) tel.style.height = ((1023 - val) / 1023 * 100) + '%';
+        if (tval) tval.textContent = val;
+      }
+    }
+
+    // ─── AVR RUNNER (WOKWI) ───────────────────────────────────
+    let cpu;
+    let serialBuf = [];
+    let lastSerialFlush = 0;
+
+    function loadHex(source, target) {
+      let loadedBytes = 0;
+      const lines = source.split(/\r?\n/);
+      for (const line of lines) {
+        if (line[0] === ':' && line.substr(7, 2) === '00') {
+          const bytes = parseInt(line.substr(1, 2), 16);
+          const addr = parseInt(line.substr(3, 4), 16);
+          for (let i = 0; i < bytes; i++) {
+            target[addr + i] = parseInt(line.substr(9 + i * 2, 2), 16);
+            loadedBytes++;
+          }
+        }
+      }
+      console.log('Bytes cargados en Flash:', loadedBytes);
+    }
+
+    function getMotorPWM(pin) {
+      if (!cpu) return 0;
+      if (pin === 5) {
+        if (cpu.data[0x44] & (1 << 5)) return cpu.data[0x48];
+        return (cpu.data[0x2B] & (1 << 5)) ? 255 : 0;
+      }
+      if (pin === 6) {
+        if (cpu.data[0x44] & (1 << 7)) return cpu.data[0x47];
+        return (cpu.data[0x2B] & (1 << 6)) ? 255 : 0;
+      }
+      if (pin === 9) {
+        if (cpu.data[0x80] & (1 << 7)) return cpu.data[0x88];
+        return (cpu.data[0x25] & (1 << 1)) ? 255 : 0;
+      }
+      if (pin === 10) {
+        if (cpu.data[0x80] & (1 << 5)) return cpu.data[0x8A];
+        return (cpu.data[0x25] & (1 << 2)) ? 255 : 0;
+      }
+      return 0;
+    }
+
+    function initAVR(hex) {
+      const flashBytes = new Uint8Array(0x8000);
+      loadHex(hex, flashBytes);
+      const program = new Uint16Array(flashBytes.buffer);
+
+      console.log("Primeras 4 instrucciones:", program[0].toString(16), program[1].toString(16), program[2].toString(16), program[3].toString(16));
+
+      cpu = new CPU(program);
+      new AVRTimer(cpu, timer0Config);
+      new AVRTimer(cpu, timer1Config);
+      new AVRTimer(cpu, timer2Config);
+      new AVRIOPort(cpu, portBConfig);
+      new AVRIOPort(cpu, portCConfig);
+      new AVRIOPort(cpu, portDConfig);
+
+      function forceSRAM(addr) {
+        const old = cpu.writeHooks[addr];
+        cpu.writeHooks[addr] = (val) => {
+          cpu.data[addr] = val;
+          if (old) return old(val);
+          return true;
+        };
+      }
+      [0x44, 0x47, 0x48, 0x80, 0x88, 0x8A, 0x25, 0x2B].forEach(forceSRAM);
+
+      const usart = new AVRUSART(cpu, usart0Config, 16000000);
+      usart.onByteTransmit = (data) => serialBuf.push(String.fromCharCode(data));
+
+      let adcChannel = 0;
+      cpu.writeHooks[0x7A] = (value) => {
+        cpu.data[0x7A] = value;
+        if (value & (1 << 6)) {
+          adcChannel = cpu.data[0x7C] & 0x0F;
+          const pinKey = 'A' + adcChannel;
+          const pinVal = Object.prototype.hasOwnProperty.call(pinVals, pinKey) ? pinVals[pinKey] : 1023;
+          cpu.data[0x78] = pinVal & 0xFF;
+          cpu.data[0x79] = (pinVal >> 8) & 0x03;
+          cpu.data[0x7A] &= ~(1 << 6);
+          return true;
+        }
+      };
+    }
+
+    async function compileSketch() {
+      const src = editorCM.getValue();
+      log('--- Compilando sketch en la nube (Wokwi API) ---', 'c-sys');
+      try {
+        const res = await fetch('https://hexi.wokwi.com/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sketch: src, board: "uno" })
+        });
+        const result = await res.json();
+        if (result.compilerOut) log(result.compilerOut, 'c-ser');
+        if (!result.hex) {
+          log('Error de compilación.', 'c-err');
+          return null;
+        }
+        log('Compilación exitosa.', 'c-ok');
+        return result.hex;
+      } catch (e) {
+        log('Error de conexión con el compilador.', 'c-err');
+        return null;
+      }
+    }
+
+    // ─── MAIN ANIMATION LOOP ──────────────────────────────────
+    let lastT = 0;
+
+    function tick(now) {
+      requestAnimationFrame(tick);
+
+      if (!running) {
+        if (camMode === 'libre' && controls) controls.update();
+        renderer.render(scene, activeCamera);
+        return;
+      }
+
+      const raw = Math.min(now - lastT, 50);
+      lastT = now;
+      const dt = raw * simSpeed;
+      sampleSensors();
+
+      if (running && cpu) {
+        const cyclesToRun = 16000 * dt;
+        const targetCycles = cpu.cycles + cyclesToRun;
+        while (cpu.cycles < targetCycles) {
+          avrInstruction(cpu);
+          cpu.tick();
+        }
+
+        const in1 = getMotorPWM(5);
+        const in2 = getMotorPWM(6);
+        const in3 = getMotorPWM(9);
+        const in4 = getMotorPWM(10);
+
+        state.vLeft = in1 - in2;
+        state.vRight = in3 - in4;
+
+        const regs = cpu ? `[PC:${cpu.pc} CYCLES:${cpu.cycles} TCCR0A:${cpu.data[0x44].toString(16)} OCR0B:${cpu.data[0x48]} OCR0A:${cpu.data[0x47]}]` : '';
+        document.getElementById('vel-hud').textContent = `vL: ${state.vLeft} | vR: ${state.vRight} ${regs}`;
+      } else {
+        state.vLeft = 0;
+        state.vRight = 0;
+      }
+
+      if (serialBuf.length && now - lastSerialFlush > 150) {
+        log('Serial: ' + serialBuf.join('').trim(), 'c-ser');
+        serialBuf = [];
+        lastSerialFlush = now;
+      }
+
+      racerPhysicsStep(dt);
+      sampleSensors();
+
+      updateMesh();
+      renderer.render(scene, activeCamera);
+    }
+
+    // ─── BUTTON HANDLERS ──────────────────────────────────────
+    document.getElementById('btnRun').onclick = async () => {
+      if (running) return;
+      document.getElementById('btnRun').disabled = true;
+      const hex = await compileSketch();
+      if (!hex) {
+        document.getElementById('btnRun').disabled = false;
+        return;
+      }
+      initAVR(hex);
+      resetState();
+      running = true;
+      lastT = performance.now();
+      document.getElementById('btnStop').disabled = false;
+      log('Simulación iniciada', 'c-ok');
+    };
+
+    document.getElementById('btnStop').onclick = () => {
+      running = false;
+      state.vLeft = 0; state.vRight = 0;
+      document.getElementById('btnRun').disabled = false;
+      document.getElementById('btnStop').disabled = true;
+      document.getElementById('vel-hud').textContent = 'vL: 0 | vR: 0';
+      log('Simulación detenida', 'c-sys');
+    };
+
+    document.getElementById('btnReset').onclick = () => {
+      const wasRunning = running;
+      if (wasRunning) document.getElementById('btnStop').click();
+      resetState();
+      renderer.render(scene, activeCamera);
+      log('Robot reseteado', 'c-sys');
+      if (wasRunning) setTimeout(() => document.getElementById('btnRun').click(), 80);
+    };
+
+    function openSettingsModal() {
+      const modal = document.getElementById('settingsModal');
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+      if (controls) controls.enabled = false;
+      updateSettingsUi();
+    }
+
+    function closeSettingsModal() {
+      const modal = document.getElementById('settingsModal');
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+      if (controls && camMode === 'libre') controls.enabled = true;
+    }
+
+    function handleSensorSettingInput() {
+      const count = document.getElementById('sensorCountRange').value;
+      const sepMm = document.getElementById('sensorSepRange').value;
+      applySensorSettings(count, sepMm);
+    }
+
+    document.getElementById('btnSettings').onclick = openSettingsModal;
+    document.getElementById('settingsClose').onclick = closeSettingsModal;
+    document.getElementById('settingsDone').onclick = closeSettingsModal;
+    document.getElementById('settingsModal').addEventListener('click', (e) => {
+      if (e.target.id === 'settingsModal') closeSettingsModal();
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.getElementById('settingsModal').classList.contains('hidden')) {
+        closeSettingsModal();
+      }
+    });
+
+    for (const id of ['sensorCountRange', 'sensorCountNumber']) {
+      document.getElementById(id).addEventListener('input', (e) => {
+        const value = clampInt(e.target.value, SENSOR_MIN_COUNT, SENSOR_MAX_COUNT);
+        document.getElementById('sensorCountRange').value = value;
+        document.getElementById('sensorCountNumber').value = value;
+        handleSensorSettingInput();
+      });
+    }
+
+    for (const id of ['sensorSepRange', 'sensorSepNumber']) {
+      document.getElementById(id).addEventListener('input', (e) => {
+        const value = clampInt(e.target.value, SENSOR_MIN_SEP_MM, SENSOR_MAX_SEP_MM);
+        document.getElementById('sensorSepRange').value = value;
+        document.getElementById('sensorSepNumber').value = value;
+        handleSensorSettingInput();
+      });
+    }
+
+    document.getElementById('simSpeedRange').oninput = function () {
+      simSpeed = parseFloat(this.value);
+      document.getElementById('simSpeedVal').textContent = this.value + 'x';
+    };
+
+    document.getElementById('trackSel').onchange = function () {
+      if (this.value === 'custom') {
+        this.value = customImageTex ? 'custom_loaded' : (window.currentTrackType || 'oval');
+        document.getElementById('trackUpload').click();
+        return;
+      }
+      window.currentTrackType = this.value;
+      document.querySelector('#trackSel option[value="custom_loaded"]').style.display = 'none';
+      const was = running;
+      if (was) document.getElementById('btnStop').click();
+      const trackType = this.value === 'custom_loaded' ? 'custom' : this.value;
+      buildTrack(trackType);
+      resetState();
+      renderer.render(scene, activeCamera);
+      log('Pista cambiada: ' + this.value, 'c-sys');
+      if (was) setTimeout(() => document.getElementById('btnRun').click(), 80);
+    };
+
+    document.getElementById('trackUpload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) {
+        document.getElementById('trackSel').value = 'oval';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        const img = new Image();
+        img.onload = function () {
+          if (customImageTex) customImageTex.dispose();
+          customImageTex = new THREE.Texture(img);
+          customImageTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          customImageTex.minFilter = THREE.LinearFilter;
+          customImageTex.magFilter = THREE.LinearFilter;
+          customImageTex.generateMipmaps = false;
+          customImageTex.needsUpdate = true;
+
+          const aspect = img.width / img.height;
+          if (aspect > 1.25) {
+            customPlaneWidth = 10;
+            customPlaneHeight = 10 / aspect;
+          } else {
+            customPlaneHeight = 8;
+            customPlaneWidth = 8 * aspect;
+          }
+
+          customImgCanvas.width = img.width;
+          customImgCanvas.height = img.height;
+          customImgCtx.drawImage(img, 0, 0);
+          customImageData = customImgCtx.getImageData(0, 0, img.width, img.height);
+
+          const was = running;
+          if (was) document.getElementById('btnStop').click();
+
+          document.querySelector('#trackSel option[value="custom_loaded"]').style.display = 'block';
+          document.getElementById('trackSel').value = 'custom_loaded';
+          window.currentTrackType = 'custom_loaded';
+
+          buildTrack('custom');
+          resetState();
+          renderer.render(scene, activeCamera);
+          log('Pista PNG cargada: ' + file.name, 'c-sys');
+
+          document.getElementById('trackUpload').value = '';
+
+          if (was) setTimeout(() => document.getElementById('btnRun').click(), 80);
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ─── CODEMIRROR INIT ──────────────────────────────────────
+    editorCM = CodeMirror.fromTextArea(document.getElementById('editor'), {
+      mode: "text/x-c++src",
+      theme: "darcula",
+      lineNumbers: true,
+      indentUnit: 2,
+      matchBrackets: true,
+      viewportMargin: Infinity
+    });
+    applySensorSettings(SENSOR_DEFAULT_COUNT, SENSOR_DEFAULT_SEP_MM, { updateSketch: true, sample: false });
+
+    // ─── CAMERAS ──────────────────────────────────────────────
+    function setCamMode(mode) {
+      camMode = mode;
+      document.querySelectorAll('.btn-cam').forEach(b => b.classList.remove('active'));
+      if (mode === 'libre') {
+        document.getElementById('btnCamLibre').classList.add('active');
+        activeCamera = perspCamera;
+        if (controls) {
+          controls.enabled = true;
+          controls.target.copy(robotGroup.position);
+          const offset = perspCamera.position.clone().sub(controls.target);
+          if (offset.lengthSq() < 0.1 || perspCamera.position.y > 3.5) {
+            perspCamera.position.set(state.x - 1.5, 1.5, state.z + 1.5);
+          }
+          controls.update();
+        }
+      } else if (mode === 'aerea') {
+        document.getElementById('btnCamAerea').classList.add('active');
+        activeCamera = perspCamera;
+        if (controls) controls.enabled = false;
+      } else if (mode === 'orto') {
+        document.getElementById('btnCamOrto').classList.add('active');
+        activeCamera = orthoCamera;
+        if (controls) controls.enabled = false;
+      }
+      updateMesh();
+      renderer.render(scene, activeCamera);
+    }
+    document.getElementById('btnCamLibre').onclick = () => setCamMode('libre');
+    document.getElementById('btnCamAerea').onclick = () => setCamMode('aerea');
+    document.getElementById('btnCamOrto').onclick = () => setCamMode('orto');
+
+    // ─── INIT ─────────────────────────────────────────────────
+    buildTrack('oval');
+    resetState();
+    renderer.render(scene, activeCamera);
+    log('Pista "óvalo" cargada — todo listo', 'c-ok');
+    log('💡 TIP: Mantené SHIFT y arrastrá en la pista para colocar el robot', 'c-sys');
+
+    // ─── HAND OF GOD (INTERACTIVE PLACEMENT) ──────────────────
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isPlacing = false;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (running) return;
+      if (!e.shiftKey) return;
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, activeCamera);
+      const intersects = raycaster.intersectObjects(trackGroup.children);
+      if (intersects.length > 0) {
+        isPlacing = true;
+        if (controls) controls.enabled = false;
+        setChassisPose(intersects[0].point.x, intersects[0].point.z, state.angle);
+        updateMesh();
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isPlacing) return;
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, activeCamera);
+      const intersects = raycaster.intersectObjects(trackGroup.children);
+      if (intersects.length > 0) {
+        const dx = intersects[0].point.x - state.x;
+        const dz = intersects[0].point.z - state.z;
+        let angle = state.angle;
+        if (dx * dx + dz * dz > 0.001) {
+          angle = Math.atan2(dz, dx);
+        }
+        setChassisPose(intersects[0].point.x, intersects[0].point.z, angle);
+        state.actualVL = 0;
+        state.actualVR = 0;
+
+        updateMesh();
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (isPlacing) {
+        isPlacing = false;
+        if (controls && camMode === 'libre') controls.enabled = true;
+      }
+    });
+
+    requestAnimationFrame(tick);
+  </script>
+</body>
+
+</html>
